@@ -1,5 +1,6 @@
 "use client"
 import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
 import { useMediaPipe } from '@/hooks/use-mediapipe'
 import { ArrowLeft, ArrowRight, CheckCircle2, Video, FileText, Brain, Loader2, Info, Eye, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
