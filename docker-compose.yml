@@ -1,0 +1,59 @@
+services:
+  # Frontend: Next.js Industrial Build
+  web:
+    build:
+      context: ./tarang-web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api
+
+  # Backend: FastAPI Enterprise
+  api:
+    build:
+      context: ./tarang-api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./tarang-api:/app
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/tarang
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=INDUSTRIAL_SECRET_K3Y_FOR_TELIPORT
+    depends_on:
+      - db
+      - redis
+
+  # Background Workers
+  worker:
+    build:
+      context: ./tarang-api
+      dockerfile: Dockerfile
+    command: celery -A app.worker worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/tarang
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - db
+
+  # Persistence
+  db:
+    image: postgres:15-alphine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=tarang
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Message Broker
+  redis:
+    image: redis:7-alpine
+
+volumes:
+  postgres_data:
