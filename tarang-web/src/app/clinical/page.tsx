@@ -6,7 +6,7 @@ import {
     Activity, Search, ChevronRight, Monitor,
     Wifi, ShieldCheck, FileText, Settings
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, API_URL } from '@/lib/utils'
 
 export default function ClinicianDashboard() {
     const [centerHealth, setCenterHealth] = useState<any>(null)
@@ -14,13 +14,13 @@ export default function ClinicianDashboard() {
     const [searchQuery, setSearchQuery] = useState('')
 
     useEffect(() => {
-        fetch('http://localhost:8000/clinical/center/1/health')
+        fetch(`${API_URL}/clinical/center/1/health`)
             .then(res => res.json())
             .then(data => setCenterHealth(data))
     }, [])
 
     const handleStartTele = async () => {
-        const res = await fetch('http://localhost:8000/clinical/tele-session/TAR_9001', {
+        const res = await fetch(`${API_URL}/clinical/tele-session/TAR_9001`, {
             method: 'POST'
         })
         const data = await res.json()

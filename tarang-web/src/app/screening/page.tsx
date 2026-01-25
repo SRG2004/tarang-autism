@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useMediaPipe } from '@/hooks/use-mediapipe'
 import { ArrowLeft, ArrowRight, CheckCircle2, Video, FileText, Brain, Loader2, Info, Eye, Zap } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, API_URL } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function ScreeningPage() {
@@ -27,7 +27,7 @@ export default function ScreeningPage() {
             setLoading(true)
             // Actual API simulation
             try {
-                const response = await fetch('http://localhost:8000/screening/process', {
+                const response = await fetch(`${API_URL}/screening/process`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

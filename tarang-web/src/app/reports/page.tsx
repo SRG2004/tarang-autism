@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { FileText, Download, Filter } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, API_URL } from '@/lib/utils'
 
 export default function ReportsPage() {
     const [downloading, setDownloading] = useState<number | null>(null)
@@ -15,7 +15,7 @@ export default function ReportsPage() {
     const handleDownload = async (id: number) => {
         setDownloading(id)
         try {
-            const response = await fetch(`http://localhost:8000/reports/${id}/download`)
+            const response = await fetch(`${API_URL}/reports/${id}/download`)
             if (response.ok) {
                 const blob = await response.blob()
                 const url = window.URL.createObjectURL(blob)

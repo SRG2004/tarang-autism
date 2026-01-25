@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Users, Send, MessageCircle, Heart, ShieldCheck, Sparkles, BookOpen } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, API_URL } from '@/lib/utils'
 
 export default function CommunityHub() {
     const [posts, setPosts] = useState<any[]>([])
@@ -11,14 +11,14 @@ export default function CommunityHub() {
     const [aiSuggestions, setAiSuggestions] = useState<any[]>([])
 
     useEffect(() => {
-        fetch('http://localhost:8000/community')
+        fetch(`${API_URL}/community`)
             .then(res => res.json())
             .then(data => setPosts(data))
     }, [])
 
     const handlePost = async () => {
         if (!newPost.trim()) return
-        const res = await fetch('http://localhost:8000/community/post', {
+        const res = await fetch(`${API_URL}/community/post`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ author: 'James S.', content: newPost })
@@ -34,7 +34,7 @@ export default function CommunityHub() {
 
     const handleAiHelp = async () => {
         if (!chatQuery.trim()) return
-        const res = await fetch('http://localhost:8000/community/help', {
+        const res = await fetch(`${API_URL}/community/help`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: chatQuery })

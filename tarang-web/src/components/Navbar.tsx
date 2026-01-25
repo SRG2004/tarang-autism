@@ -1,6 +1,6 @@
 "use client"
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import { cn, API_URL } from '@/lib/utils'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useI18n } from '@/hooks/use-i18n'
@@ -25,7 +25,7 @@ export function Navbar() {
     const handleRunDemo = async () => {
         setRunningDemo(true)
         try {
-            const res = await fetch('http://localhost:8000/demo/run', { method: 'POST' })
+            const res = await fetch(`${API_URL}/demo/run`, { method: 'POST' })
             const data = await res.json()
             setDemoResult(data)
             setTimeout(() => setDemoResult(null), 5000)

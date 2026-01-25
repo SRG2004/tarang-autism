@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Activity, Calendar, Clock, User, ArrowUpRight, Plus, Download, ChevronRight, AlertCircle } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
-import { cn } from '@/lib/utils'
+import { cn, API_URL } from '@/lib/utils'
 
 const data = [
     { name: 'W1', score: 38 },
@@ -20,7 +20,7 @@ export default function Dashboard() {
     const handleSchedule = async (title: string) => {
         setScheduling(title)
         try {
-            const response = await fetch('http://localhost:8000/appointments/schedule', {
+            const response = await fetch(`${API_URL}/appointments/schedule`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

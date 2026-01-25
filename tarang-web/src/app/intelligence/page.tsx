@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Activity, Globe, Users, TrendingUp, AlertTriangle, Building2, MapPin } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
-import { cn } from '@/lib/utils'
+import { cn, API_URL } from '@/lib/utils'
 
 export default function IntelligenceDashboard() {
     const [prediction, setPrediction] = useState<any>(null)
@@ -11,11 +11,11 @@ export default function IntelligenceDashboard() {
 
     useEffect(() => {
         // Fetch Industrial Analytics
-        fetch('http://localhost:8000/analytics/prediction/Arvid Smith')
+        fetch(`${API_URL}/analytics/prediction/Arvid Smith`)
             .then(res => res.json())
             .then(data => setPrediction(data))
 
-        fetch('http://localhost:8000/centers')
+        fetch(`${API_URL}/centers`)
             .then(res => res.json())
             .then(data => setCenters(data))
     }, [])
