@@ -68,7 +68,10 @@ Required for Celery background workers to handle heavy AI tasks.
     3.  **Deploy Unified Service:**
         -   Select **New > Web Service**.
         -   Connect your `tarang` repo.
-        -   Specify `Dockerfile` path: `tarang-api/Dockerfile`.
+        -   **Root Directory:** Set this to `tarang-api`. (Crucial!)
+        -   **Dockerfile Path:** Set this to **exactly** `Dockerfile`. 
+            > [!CAUTION]
+            > Make sure it does **NOT** say `tarang-api/Dockerfile`. Once you set the Root Directory, the Dockerfile path should just be the filename.
         -   **Environment Variables:**
             -   `DATABASE_URL`: (Your Neon URL) **[NO QUOTES]**
             -   `REDIS_URL`: (Your Upstash URL) **[NO QUOTES]**

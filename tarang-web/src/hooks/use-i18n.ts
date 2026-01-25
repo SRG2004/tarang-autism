@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { locales, LocaleType } from './locales'
+import { locales, LocaleType } from '../lib/locales'
 
 interface i18nStore {
     language: 'en' | 'hi'
