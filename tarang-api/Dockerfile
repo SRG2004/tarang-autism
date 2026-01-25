@@ -18,5 +18,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project
 COPY . .
 
-# Run uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Make start script executable
+RUN chmod +x start.sh
+
+# Run the mono-container start script
+CMD ["./start.sh"]

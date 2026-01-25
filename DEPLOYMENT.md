@@ -20,7 +20,7 @@ Render and Vercel both deploy directly from your GitHub code.
       git add .
       git commit -m "Initialize Industrial Tarang Platform"
       git branch -M main
-      git remote add origin https://github.com/YOUR_USERNAME/tarang-industrial.git
+      git remote add origin https://github.com/SRG2004/tarang-autism.git
       git push -u origin main
       ```
 4.  **Verify:** Refresh your GitHub page; you should see your folders (`tarang-api`, `tarang-web`, etc.) there.
@@ -60,27 +60,20 @@ Required for Celery background workers to handle heavy AI tasks.
 
 ---
 
-## 3. The Backend API & Workers (Render)
-Render allows us to host **Docker Containers** for free. 
-> [!IMPORTANT]
-> Render's free tier "spins down" after 15 mins of inactivity. We will use the **Cron-Ping Hack** (Step 5) to prevent this.
+3.  **The Unified Backend (Render)**
+    Render allows us to host **Docker Containers** for free. We have configured the API and Worker to run in a single container to stay in the **Free Plan**. 
 
-1.  **Preparation:** Push your code to a GitHub repository.
-2.  Go to [Render.com](https://render.com/) and connect your GitHub.
-3.  **Deploy API:**
-    -   Select **New > Web Service**.
-    -   Connect your `tarang` repo.
-    -   Specify `Dockerfile` path: `tarang-api/Dockerfile`.
-    -   **Environment Variables:**
-        -   `DATABASE_URL`: (Your Neon URL)
-        -   `REDIS_URL`: (Your Upstash URL)
-        -   `SECRET_KEY`: (A random long string)
-4.  **Deploy Worker:**
-    -   Select **New > Background Worker**.
-    -   Connect the same repo.
-    -   Path: `tarang-api/Dockerfile`.
-    -   **Command Override:** `celery -A app.worker worker --loglevel=info` (Optional, usually handled in Docker).
-    -   Use the same Env Vars as the API.
+    1.  **Preparation:** Push your code to a GitHub repository.
+    2.  Go to [Render.com](https://render.com/) and connect your GitHub.
+    3.  **Deploy Unified Service:**
+        -   Select **New > Web Service**.
+        -   Connect your `tarang` repo.
+        -   Specify `Dockerfile` path: `tarang-api/Dockerfile`.
+        -   **Environment Variables:**
+            -   `DATABASE_URL`: (Your Neon URL) **[NO QUOTES]**
+            -   `REDIS_URL`: (Your Upstash URL) **[NO QUOTES]**
+            -   `SECRET_KEY`: (A random long string) **[NO QUOTES]**
+    4.  **Wait for Build:** Render will build the container and start both the API and the Worker automatically.
 
 ---
 
@@ -109,6 +102,26 @@ If you don't do this, the server will "sleep" and judges will think it's broken.
 1.  **Check Health:** Open `https://your-api.onrender.com/health`. Should return `{"status": "healthy"}`.
 2.  **Check DB:** Run a test screening; verify it saves to the "Reports" archive.
 3.  **Check Demo:** Press "Run Full Demo" in the Navbar. Ensure all agent steps turn green.
+
+---
+
+## 7. CRITICAL: Fix "Embedded Git Repository" Warning
+If you saw a warning about `tarang-web` being an embedded repository (which happened in your last push), your frontend code **was not uploaded**. You must fix it now or Vercel will fail:
+
+1.  **Remove the hidden git folder in web:**
+    In your terminal (d:\Teliport), run:
+    ```bash
+    rm -rf tarang-web/.git
+    ```
+2.  **Reset the git index for the web folder:**
+    Run these commands one by one:
+    ```bash
+    git rm --cached tarang-web
+    git add tarang-web
+    git commit -m "Fix: Actually upload frontend code"
+    git push
+    ```
+    *Verified:* Refresh your GitHub. You should now be able to click into `tarang-web` and see your files.
 
 ---
 **Good luck at TELIPORT Season 3!**  
