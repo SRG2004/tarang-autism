@@ -1,8 +1,21 @@
 from celery import Celery
 import os
+import ssl
 
 redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+# Support for secure redis (rediss://) on Upstash/Render
+broker_use_ssl = None
+if redis_url.startswith("rediss://"):
+    broker_use_ssl = {
+        "ssl_cert_reqs": ssl.CERT_NONE
+    }
+
 celery_app = Celery("tarang_tasks", broker=redis_url, backend=redis_url)
+celery_app.conf.update(
+    broker_use_ssl=broker_use_ssl,
+    redis_backend_use_ssl=broker_use_ssl
+)
 
 @celery_app.task
 def process_heavy_ai_fusion(session_id: int, video_blob_url: str):

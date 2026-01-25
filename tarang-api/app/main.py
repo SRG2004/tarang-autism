@@ -15,6 +15,7 @@ from app.reports import ReportGenerator
 from fastapi.responses import StreamingResponse
 import uvicorn
 import logging
+import datetime
 
 # Industrial Logging Setup
 logging.basicConfig(level=logging.INFO)
@@ -54,7 +55,7 @@ demo_agent = DemoAgent()
 
 @app.get("/health")
 def health_check():
-    return {"status": "operational", "timestamp": str(logging.datetime.datetime.now())}
+    return {"status": "operational", "timestamp": str(datetime.datetime.now())}
 
 @app.post("/screening/process-industrial")
 async def process_screening_industrial(
