@@ -197,9 +197,9 @@ export default function Home() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-12 max-w-7xl mx-auto">
           <div className="font-serif text-2xl font-bold text-[#FDFCF8]">TARANG</div>
           <div className="flex gap-12 font-bold uppercase text-[10px] tracking-widest">
-            <span className="hover:text-white cursor-pointer transition-colors">Privacy Policy</span>
-            <span className="hover:text-white cursor-pointer transition-colors">Compliance</span>
-            <span className="hover:text-white cursor-pointer transition-colors">Contact</span>
+            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link href="/portal" className="hover:text-white transition-colors">Portal</Link>
+            <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
           </div>
           <p className="text-[10px] font-mono tracking-widest">© 2026 Submission for TELIPORT Season 3</p>
         </div>
