@@ -63,7 +63,7 @@ def health_check():
 async def process_screening_industrial(
     video_metrics: dict = Body(...),
     questionnaire_score: int = Body(...),
-    patient_name: str = "Industrial Demo",
+    patient_name: str = Body(default="Industrial Demo"),
     db: Session = Depends(get_db)
 ):
     """
