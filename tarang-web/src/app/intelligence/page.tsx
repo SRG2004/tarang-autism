@@ -88,10 +88,10 @@ export default function IntelligenceDashboard() {
                             <div className="p-10 border-2 border-[#0B3D33] bg-[#0B3D33] text-[#FDFCF8]">
                                 <h4 className="text-xs font-black uppercase tracking-widest text-[#D4AF37] mb-6">Velocity_Matrix</h4>
                                 <div className="flex items-end justify-between">
-                                    <span className="text-6xl font-serif font-black">{prediction?.prediction?.trend || "..."}</span>
+                                    <span className="text-4xl font-serif font-black">{prediction?.prediction?.trend || "..."}</span>
                                     <Activity className="w-10 h-10 text-[#D4AF37]" />
                                 </div>
-                                <p className="mt-6 text-[10px] font-mono opacity-40">Inference_Delay: 142ms | GPU_Load: 12%</p>
+                                <p className="mt-6 text-[10px] font-mono opacity-40">Velocity: {prediction?.prediction?.velocity} | Inference_Delay: 142ms</p>
                             </div>
                         </div>
                     </div>

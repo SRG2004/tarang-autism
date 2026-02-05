@@ -241,8 +241,9 @@ export default function ScreeningPage() {
                                             <h2 className="text-7xl font-serif font-black tracking-tighter leading-none">Fusion <br /> Complete</h2>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-xl font-mono font-black text-[#D4AF37] mb-2">RISK_SCORE</p>
+                                            <p className="text-xl font-mono font-black text-[#D4AF37] mb-2">{results?.risk_results?.interpretation || 'RISK_SCORE'}</p>
                                             <h3 className="text-8xl font-serif font-black leading-none">{results?.risk_results?.risk_score}%</h3>
+                                            <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Confidence: {results?.risk_results?.confidence}</p>
                                         </div>
                                     </div>
 
