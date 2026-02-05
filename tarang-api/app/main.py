@@ -88,8 +88,13 @@ async def process_screening_industrial(
         db.commit()
         db.refresh(db_session)
         
-        # 3. Offload Heavy AI to Worker
-        process_heavy_ai_fusion.delay(db_session.id, "s3://vids/session_id_raw.mp4")
+        # 3. Offload Heavy AI to Worker (optional - gracefully handle if Redis unavailable)
+        try:
+            process_heavy_ai_fusion.delay(db_session.id, "s3://vids/session_id_raw.mp4")
+            async_status = "Processing Heavy AI..."
+        except Exception as worker_error:
+            logger.warning(f"Celery worker unavailable: {worker_error}")
+            async_status = "Sync mode (worker unavailable)"
         
         logger.info(f"Optimized screening processed for {patient_name}. Session ID: {db_session.id}")
         
@@ -97,7 +102,7 @@ async def process_screening_industrial(
             "session_id": db_session.id,
             "risk_results": risk_results, # Updated key name to match frontend expectation
             "clinical_summary": clinical_summary,
-            "async_status": "Processing Heavy AI...",
+            "async_status": async_status,
             "report_url": f"/reports/{db_session.id}"
         }
     except Exception as e:
