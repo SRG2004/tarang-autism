@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff, AlertCircle, Shield, Users } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth, UserRole } from '@/context/AuthContext'
 
 export default function RegisterPage() {
     const [formData, setFormData] = useState({
@@ -12,7 +12,7 @@ export default function RegisterPage() {
         email: '',
         password: '',
         confirmPassword: '',
-        role: 'PARENT',
+        role: 'PARENT' as UserRole,
         agreeToTerms: false
     })
     const [showPassword, setShowPassword] = useState(false)
@@ -137,8 +137,8 @@ export default function RegisterPage() {
                                         type="button"
                                         onClick={() => updateField('role', role.id)}
                                         className={`p-4 border-2 text-left transition-all ${formData.role === role.id
-                                                ? 'border-[#D4AF37] bg-[#D4AF37]/5'
-                                                : 'border-[#0B3D33]/10 hover:border-[#0B3D33]/30'
+                                            ? 'border-[#D4AF37] bg-[#D4AF37]/5'
+                                            : 'border-[#0B3D33]/10 hover:border-[#0B3D33]/30'
                                             }`}
                                     >
                                         <role.icon className={`w-5 h-5 mb-2 ${formData.role === role.id ? 'text-[#D4AF37]' : 'text-[#0B3D33]/40'}`} />
