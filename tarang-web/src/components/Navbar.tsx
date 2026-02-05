@@ -4,9 +4,10 @@ import { cn, API_URL } from '@/lib/utils'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useI18n } from '@/hooks/use-i18n'
-import { Play, Globe, CheckCircle, LogIn, LogOut, User, Settings, ChevronDown } from 'lucide-react'
+import { Play, Globe, CheckCircle, LogIn, LogOut, User, Settings, ChevronDown, Users, Stethoscope, Shield } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth, UserRole, ROLE_ROUTES } from '@/context/AuthContext'
+import { RoleBadge } from '@/components/ProtectedRoute'
 
 export function Navbar() {
     const pathname = usePathname()
@@ -30,7 +31,8 @@ export function Navbar() {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    const navItems = [
+    // All possible nav items
+    const allNavItems = [
         { name: t.dashboard, href: '/dashboard' },
         { name: t.clinical, href: '/clinical' },
         { name: t.intelligence, href: '/intelligence' },
@@ -38,6 +40,14 @@ export function Navbar() {
         { name: t.screening, href: '/screening' },
         { name: t.reports, href: '/reports' },
     ]
+
+    // Filter nav items based on user role
+    const navItems = user
+        ? allNavItems.filter(item => {
+            const roleConfig = ROLE_ROUTES[user.role]
+            return roleConfig.allowed[0] === '*' || roleConfig.allowed.includes(item.href)
+        })
+        : allNavItems
 
     const handleRunDemo = async () => {
         setRunningDemo(true)
@@ -143,9 +153,9 @@ export function Navbar() {
                                     <div className="p-4 border-b border-[#0B3D33]/10">
                                         <p className="font-bold text-sm text-[#0B3D33]">{user.name}</p>
                                         <p className="text-xs text-[#0B3D33]/50">{user.email}</p>
-                                        <span className="inline-block mt-2 text-[8px] font-black uppercase tracking-widest bg-[#D4AF37]/20 text-[#0B3D33] px-2 py-1">
-                                            {user.role}
-                                        </span>
+                                        <div className="mt-2">
+                                            <RoleBadge role={user.role} />
+                                        </div>
                                     </div>
                                     <div className="py-2">
                                         <Link

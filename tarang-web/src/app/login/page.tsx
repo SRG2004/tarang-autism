@@ -1,20 +1,31 @@
 "use client"
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertCircle, Users, Stethoscope, Shield } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth, UserRole } from '@/context/AuthContext'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [selectedRole, setSelectedRole] = useState<UserRole>('PARENT')
     const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState('')
     const [isLoading, setIsLoading] = useState(false)
 
-    const router = useRouter()
-    const { login } = useAuth()
+    const { login, isAuthenticated, redirectByRole } = useAuth()
+
+    // If already authenticated, redirect
+    if (isAuthenticated) {
+        redirectByRole()
+        return null
+    }
+
+    const roles = [
+        { id: 'PARENT' as UserRole, label: 'Parent', icon: Users, color: 'bg-blue-500' },
+        { id: 'CLINICIAN' as UserRole, label: 'Clinician', icon: Stethoscope, color: 'bg-emerald-500' },
+        { id: 'ADMIN' as UserRole, label: 'Admin', icon: Shield, color: 'bg-amber-500' }
+    ]
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -27,8 +38,8 @@ export default function LoginPage() {
 
         setIsLoading(true)
         try {
-            await login(email, password)
-            router.push('/dashboard')
+            await login(email, password, selectedRole)
+            // Redirect happens automatically in AuthContext
         } catch (err) {
             setError('Invalid credentials. Please try again.')
         } finally {
@@ -54,17 +65,27 @@ export default function LoginPage() {
 
                 <div className="relative z-10">
                     <h1 className="text-6xl font-serif font-black tracking-tighter leading-none mb-8">
-                        EARLY<br />
-                        <span className="text-[#D4AF37]">VISION.</span>
+                        ROLE-BASED<br />
+                        <span className="text-[#D4AF37]">ACCESS.</span>
                     </h1>
                     <p className="text-xl font-light opacity-60 max-w-md leading-relaxed">
-                        AI-powered early autism screening platform.
-                        Bridging the diagnosis gap with precision care.
+                        Parents, Clinicians, and Administrators each have tailored dashboards and permissions.
                     </p>
                 </div>
 
-                <div className="relative z-10 text-sm font-mono opacity-40">
-                    © 2026 TELIPORT Season 3
+                <div className="relative z-10 space-y-4 text-sm">
+                    <div className="flex items-center gap-3 opacity-60">
+                        <Users className="w-5 h-5 text-blue-400" />
+                        <span>Parents → Screening & Reports</span>
+                    </div>
+                    <div className="flex items-center gap-3 opacity-60">
+                        <Stethoscope className="w-5 h-5 text-emerald-400" />
+                        <span>Clinicians → Clinical Dashboard & Intelligence</span>
+                    </div>
+                    <div className="flex items-center gap-3 opacity-60">
+                        <Shield className="w-5 h-5 text-amber-400" />
+                        <span>Admins → Full System Access</span>
+                    </div>
                 </div>
             </div>
 
@@ -75,12 +96,12 @@ export default function LoginPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="w-full max-w-md"
                 >
-                    <div className="mb-12">
+                    <div className="mb-10">
                         <h2 className="text-4xl font-serif font-black tracking-tighter text-[#0B3D33] mb-3">
                             Welcome Back
                         </h2>
                         <p className="text-[#0B3D33]/60 font-medium">
-                            Sign in to continue to your dashboard
+                            Select your role and sign in
                         </p>
                     </div>
 
@@ -96,6 +117,31 @@ export default function LoginPage() {
                             </motion.div>
                         )}
 
+                        {/* Role Selection */}
+                        <div>
+                            <label className="block text-xs font-black uppercase tracking-widest text-[#0B3D33]/60 mb-3">
+                                Select Role
+                            </label>
+                            <div className="grid grid-cols-3 gap-3">
+                                {roles.map(role => (
+                                    <button
+                                        key={role.id}
+                                        type="button"
+                                        onClick={() => setSelectedRole(role.id)}
+                                        className={`p-4 border-2 text-center transition-all ${selectedRole === role.id
+                                                ? 'border-[#D4AF37] bg-[#D4AF37]/10'
+                                                : 'border-[#0B3D33]/10 hover:border-[#0B3D33]/30'
+                                            }`}
+                                    >
+                                        <role.icon className={`w-6 h-6 mx-auto mb-2 ${selectedRole === role.id ? 'text-[#D4AF37]' : 'text-[#0B3D33]/40'}`} />
+                                        <p className={`font-bold text-xs uppercase tracking-wider ${selectedRole === role.id ? 'text-[#0B3D33]' : 'text-[#0B3D33]/60'}`}>
+                                            {role.label}
+                                        </p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-xs font-black uppercase tracking-widest text-[#0B3D33]/60 mb-3">
                                 Email Address
@@ -107,7 +153,7 @@ export default function LoginPage() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full bg-white border-2 border-[#0B3D33]/10 p-4 pl-12 outline-none focus:border-[#D4AF37] transition-colors font-medium"
-                                    placeholder="guardian@example.com"
+                                    placeholder={selectedRole === 'PARENT' ? 'guardian@example.com' : selectedRole === 'CLINICIAN' ? 'doctor@clinic.com' : 'admin@tarang.health'}
                                 />
                             </div>
                         </div>
@@ -151,7 +197,7 @@ export default function LoginPage() {
                             className="w-full bg-[#0B3D33] text-[#D4AF37] p-5 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isLoading ? 'Signing in...' : (
-                                <>Sign In <ArrowRight className="w-5 h-5" /></>
+                                <>Sign In as {selectedRole} <ArrowRight className="w-5 h-5" /></>
                             )}
                         </button>
                     </form>
@@ -165,9 +211,9 @@ export default function LoginPage() {
                         </p>
                     </div>
 
-                    <div className="mt-12 pt-8 border-t border-[#0B3D33]/10">
-                        <p className="text-xs font-mono text-[#0B3D33]/40 text-center uppercase tracking-widest">
-                            Role-Based Access: Parent • Clinician • Admin
+                    <div className="mt-8 p-4 bg-[#0B3D33]/5 text-center">
+                        <p className="text-xs font-mono text-[#0B3D33]/40 uppercase tracking-widest">
+                            Demo: Use any email/password
                         </p>
                     </div>
                 </motion.div>
