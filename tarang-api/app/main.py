@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Body, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from app.agents.screening import ScreeningAgent
+from app.agents.screening_ml import ScreeningAgent  # ML-powered agent using real UCI data
 from app.agents.clinical import ClinicalSupportAgent
 from app.agents.therapy import TherapyPlanningAgent
 from app.agents.outcome import OutcomeAgent
@@ -57,6 +57,7 @@ demo_agent = DemoAgent()
 def health_check():
     return {"status": "operational", "timestamp": str(datetime.datetime.now())}
 
+@app.post("/screening/process")
 @app.post("/screening/process-industrial")
 async def process_screening_industrial(
     video_metrics: dict = Body(...),
@@ -65,18 +66,20 @@ async def process_screening_industrial(
     db: Session = Depends(get_db)
 ):
     """
-    Industrial endpoint with asynchronous processing and persistence.
+    Optimized endpoint with enhanced multimodal fusion and clinical explainability.
     """
     try:
-        # 1. Immediate Screen Result (Hybrid - Screening Agent)
+        # 1. Immediate Screen Result (Hybrid - Optimized Screening Agent)
         risk_results = screening_agent.analyze_signals(video_metrics, questionnaire_score)
         clinical_summary = clinical_agent.generate_summary({"name": patient_name}, risk_results)
         
-        # 2. Persistence
+        # 2. Persistence with new metrics
         db_session = ScreeningSession(
             patient_name=patient_name,
             risk_score=risk_results["risk_score"],
             confidence=risk_results["confidence"],
+            dissonance_factor=risk_results.get("dissonance_factor"),
+            interpretation=risk_results.get("interpretation"),
             breakdown=risk_results["breakdown"],
             clinical_recommendation=clinical_summary["clinical_recommendation"]
         )
@@ -84,14 +87,15 @@ async def process_screening_industrial(
         db.commit()
         db.refresh(db_session)
         
-        # 3. Offload Heavy AI to Worker (Scalability)
+        # 3. Offload Heavy AI to Worker
         process_heavy_ai_fusion.delay(db_session.id, "s3://vids/session_id_raw.mp4")
         
-        logger.info(f"Industrial screening initiated for {patient_name}. Session ID: {db_session.id}")
+        logger.info(f"Optimized screening processed for {patient_name}. Session ID: {db_session.id}")
         
         return {
             "session_id": db_session.id,
-            "immediate_risk": risk_results,
+            "risk_results": risk_results, # Updated key name to match frontend expectation
+            "clinical_summary": clinical_summary,
             "async_status": "Processing Heavy AI...",
             "report_url": f"/reports/{db_session.id}"
         }

@@ -11,3 +11,7 @@ python-dotenv
 celery
 redis
 reportlab
+scikit-learn
+joblib
+pandas
+ucimlrepo
