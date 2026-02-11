@@ -7,12 +7,18 @@ import os
 # Read database URL from environment, fallback to SQLite for local development
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./tarang.db")
 
+# SQLAlchemy 1.4+ requires "postgresql://" instead of "postgres://"
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 # Handle SQLite-specific connection args
 if DATABASE_URL.startswith("sqlite"):
+    print("🗄️ Using local SQLite database.")
     engine = create_engine(
         DATABASE_URL, connect_args={"check_same_thread": False}
     )
 else:
+    print(f"🐘 Using production PostgreSQL database.")
     # PostgreSQL for production (Render/Neon)
     engine = create_engine(DATABASE_URL)
 
