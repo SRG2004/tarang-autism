@@ -10,6 +10,7 @@ export default function ScreeningPage() {
     const [step, setStep] = useState(0)
     const [loading, setLoading] = useState(false)
     const [results, setResults] = useState<any>(null)
+    const [answers, setAnswers] = useState<Record<string, string>>({})
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const { isLoaded, detect } = useMediaPipe()
@@ -135,7 +136,17 @@ export default function ScreeningPage() {
                                             <p className="text-2xl font-serif font-bold">Does your child show objects to you by holding them up?</p>
                                             <div className="flex flex-wrap gap-4">
                                                 {["Rarely", "Occasionally", "Frequently", "Always"].map(opt => (
-                                                    <button type="button" key={opt} className="px-8 py-3 border-2 border-[#0B3D33] text-[#0B3D33] font-black uppercase text-[10px] tracking-widest hover:bg-[#D4AF37] hover:border-[#D4AF37] hover:text-white transition-all cursor-pointer relative z-20">
+                                                    <button
+                                                        type="button"
+                                                        key={opt}
+                                                        onClick={() => setAnswers(prev => ({ ...prev, social: opt }))}
+                                                        className={cn(
+                                                            "px-8 py-3 border-2 font-black uppercase text-[10px] tracking-widest transition-all cursor-pointer relative z-20",
+                                                            answers.social === opt
+                                                                ? "bg-[#D4AF37] border-[#D4AF37] text-white"
+                                                                : "border-[#0B3D33] text-[#0B3D33] hover:bg-[#D4AF37] hover:border-[#D4AF37] hover:text-white"
+                                                        )}
+                                                    >
                                                         {opt}
                                                     </button>
                                                 ))}
@@ -146,7 +157,17 @@ export default function ScreeningPage() {
                                             <p className="text-2xl font-serif font-bold">Have you noticed unusual repetitive body movements?</p>
                                             <div className="flex flex-wrap gap-4">
                                                 {["No", "Yes, subtle", "Yes, frequent"].map(opt => (
-                                                    <button type="button" key={opt} className="px-8 py-3 border-2 border-[#0B3D33] text-[#0B3D33] font-black uppercase text-[10px] tracking-widest hover:bg-[#D4AF37] transition-all cursor-pointer relative z-20">
+                                                    <button
+                                                        type="button"
+                                                        key={opt}
+                                                        onClick={() => setAnswers(prev => ({ ...prev, motor: opt }))}
+                                                        className={cn(
+                                                            "px-8 py-3 border-2 font-black uppercase text-[10px] tracking-widest transition-all cursor-pointer relative z-20",
+                                                            answers.motor === opt
+                                                                ? "bg-[#D4AF37] border-[#D4AF37] text-white"
+                                                                : "border-[#0B3D33] text-[#0B3D33] hover:bg-[#D4AF37] hover:border-[#D4AF37] hover:text-white"
+                                                        )}
+                                                    >
                                                         {opt}
                                                     </button>
                                                 ))}
