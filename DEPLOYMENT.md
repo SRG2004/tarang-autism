@@ -1,131 +1,275 @@
-# TARANG: Permanent Free-Tier Hosting Guide 🚀
-*How to host the entire industrial stack for free & keep it 100% "Always-On" for judges.*
+# 🚀 TARANG DEPLOYMENT GUIDE
 
-To ensure judges never see a "Server Down" error, we will use a **Distributed Multi-Cloud Strategy**.
+## Quick Deploy (Production Ready)
 
----
-
-## 0. Create a GitHub Repository (Prerequisite)
-Render and Vercel both deploy directly from your GitHub code.
-1.  **Create Account:** Go to [GitHub.com](https://github.com/) and sign up.
-2.  **New Repo:** Click the **+** icon (top right) > **New repository**.
-    - **Name:** `tarang-industrial`
-    - **Visibility:** **Public** (Required for some free tiers, and for judges to see code if needed).
-    - **Initialize:** Leave everything else unchecked (No README, no gitignore).
-3.  **Upload Code:**
-    - Open your terminal in the `d:\Teliport` folder.
-    - Run these commands one by one:
-      ```bash
-      git init
-      git add .
-      git commit -m "Initialize Industrial Tarang Platform"
-      git branch -M main
-      git remote add origin https://github.com/SRG2004/tarang-autism.git
-      git push -u origin main
-      ```
-4.  **Verify:** Refresh your GitHub page; you should see your folders (`tarang-api`, `tarang-web`, etc.) there.
+### Prerequisites
+- GitHub account with the repository
+- [Neon](https://neon.tech) account (PostgreSQL)
+- [Upstash](https://upstash.com) account (Redis)
+- [Vercel](https://vercel.com) account (Frontend)
+- [Render](https://render.com) account (Backend)
 
 ---
 
-## 1. The Database (Neon PostgreSQL)
-Neon offers a powerful free tier that never sleeps (cold starts are very fast, or we keep it awake).
-1.  Go to [Neon.tech](https://neon.tech/) and sign up (No credit card required).
-2.  Create a project named `tarang-industrial`.
-    - **Postgres Version:** Choose **v16** (Latest & Fastest).
-    - **Region:** Choose **Asia Pacific (Singapore)** as the safest common region. 
-      > [!TIP]
-      > If **Mumbai** is available as a free option in all three (Neon, Upstash, AND Render), choose Mumbai. Otherwise, stick to **Singapore** for all services to avoid cross-region latency.
-    - **Neon Auth:** Keep this **OFF** (We use our own custom Industrial JWT logic).
-3.  Copy your **Connection String** (Postgres URL). It will look like: 
-    `postgresql://user:password@cloud-id.region.pooler.neon.tech/neondb?sslmode=require`
-4.  **Save this URL.** You will need it for the Backend.
+## Step 1: Generate Secrets
+
+```bash
+# Generate JWT secret (64 characters)
+python -c "import secrets; print('JWT_SECRET=' + secrets.token_urlsafe(64))"
+
+# Generate encryption key (exactly 32 bytes for AES-256)
+python -c "import secrets; print('SECRET_KEY=' + secrets.token_urlsafe(32)[:32])"
+```
+
+**Save these securely - you'll need them for deployment!**
 
 ---
 
-## 2. The Message Broker (Upstash Redis)
-Required for Celery background workers to handle heavy AI tasks.
-1.  Go to [Upstash.com](https://upstash.com/) and sign up.
-2.  In the Console, click **Create Database**.
-    - **Name:** `tarang-broker`
-    - **Type:** Standard (Free).
-    - **Region:** Choose the **SAME** region you picked for Neon (e.g., **Singapore** or **Mumbai**).
-    - **TLS/SSL:** Usually enabled by default (No action needed if you don't see the toggle).
-    - **Eviction:** Keep this **OFF**.
-      > [!IMPORTANT]
-      > For a message broker (Celery), you want all tasks to be delivered. If eviction is ON, Redis might delete old "waiting" tasks to make room for new ones, which can lead to missed screenings.
-3.  Scroll down to the **Node.js / Python** section.
-4.  Copy the **REDIS_URL**. It will look exactly like this (use the one starting with `redis://`):
-    `redis://default:YOUR_PASSWORD@your-endpoint.upstash.io:32371`
-5.  **Note:** Celery requires the `redis://` protocol (not `rediss://` usually, unless explicitly configured, so stick to the provided URL).
+## Step 2: Set Up Database (Neon)
+
+1. Go to [Neon.tech](https://neon.tech) → Sign up (free)
+2. Create new project: `tarang-production`
+3. Region: Choose closest to your users
+4. Copy the connection string (starts with `postgresql://`)
+5. Save as `DATABASE_URL`
 
 ---
 
-3.  **The Unified Backend (Render)**
-    Render allows us to host **Docker Containers** for free. We have configured the API and Worker to run in a single container to stay in the **Free Plan**. 
+## Step 3: Set Up Redis (Upstash)
 
-    1.  **Preparation:** Push your code to a GitHub repository.
-    2.  Go to [Render.com](https://render.com/) and connect your GitHub.
-    3.  **Deploy Unified Service:**
-        -   Select **New > Web Service**.
-        -   Connect your `tarang` repo.
-        -   **Root Directory:** Set this to `tarang-api`. (Crucial!)
-        -   **Dockerfile Path:** Set this to **exactly** `Dockerfile`. 
-            > [!CAUTION]
-            > Make sure it does **NOT** say `tarang-api/Dockerfile`. Once you set the Root Directory, the Dockerfile path should just be the filename.
-        -   **Environment Variables:**
-            -   `DATABASE_URL`: (Your Neon URL) **[NO QUOTES]**
-            -   `REDIS_URL`: (Your Upstash URL) **[NO QUOTES]**
-            -   `SECRET_KEY`: (A random long string) **[NO QUOTES]**
-    4.  **Wait for Build:** Render will build the container and start both the API and the Worker automatically.
+1. Go to [Upstash.com](https://upstash.com) → Sign up (free)
+2. Create database: `tarang-cache`
+3. Region: Same as your Neon database
+4. Copy the Redis URL (starts with `redis://` or `rediss://`)
+5. Save as `REDIS_URL`
 
 ---
 
-## 4. The Frontend (Vercel)
-Vercel is the gold standard for Next.js.
-1.  Go to [Vercel.com](https://vercel.com/) and sign up.
-2.  Select **New Project** and import your `tarang` repo.
-3.  **Root Directory:** Set to `tarang-web`.
-4.  **Environment Variables:**
-    -   `NEXT_PUBLIC_API_URL`: (Your Render API URL, e.g., `https://tarang-api.onrender.com`)
-5.  Click **Deploy**.
+## Step 4: Deploy Backend (Render)
+
+1. Go to [Render.com](https://render.com) → Sign up
+2. Click **New +** → **Web Service**
+3. Connect your GitHub repository
+4. Settings:
+   - **Name:** `tarang-api`
+   - **Root Directory:** `tarang-api`
+   - **Environment:** `Docker`
+   - **Dockerfile Path:** `Dockerfile`
+   - **Plan:** Free
+
+5. **Environment Variables** (click "Add Environment Variable"):
+   ```
+   ENVIRONMENT=production
+   SECRET_KEY=<your-32-byte-key>
+   JWT_SECRET=<your-64-char-key>
+   DATABASE_URL=<your-neon-connection-string>
+   REDIS_URL=<your-upstash-redis-url>
+   ALLOWED_ORIGINS=https://your-frontend.vercel.app
+   ```
+
+6. Click **Create Web Service**
+7. Wait for deployment (5-10 minutes)
+8. Copy the URL (e.g., `https://tarang-api.onrender.com`)
 
 ---
 
-## 5. THE CRITICAL STEP: Keep Always-On (Cron-job.org)
-If you don't do this, the server will "sleep" and judges will think it's broken.
-1.  Go to [Cron-job.org](https://cron-job.org/) (Free forever).
-2.  Create a **New Cronjob**.
-3.  **URL to call:** `https://your-tarang-api.onrender.com/health`
-4.  **Execution schedule:** Every **10 minutes** (0 */10 * * *).
-5.  This "pings" your server 24/7, keeping it awake even if no one is using it.
+## Step 5: Deploy Frontend (Vercel)
+
+1. Go to [Vercel.com](https://vercel.com) → Sign up
+2. Click **Add New** → **Project**
+3. Import your GitHub repository
+4. Settings:
+   - **Framework Preset:** Next.js
+   - **Root Directory:** `tarang-web`
+   - **Build Command:** `npm run build`
+   - **Output Directory:** Leave empty (auto-detected)
+
+5. **Environment Variables:**
+   ```
+   NEXT_PUBLIC_API_URL=https://tarang-api.onrender.com
+   ```
+   *(Use your Render backend URL from Step 4)*
+
+6. Click **Deploy**
+7. Wait for deployment (2-3 minutes)
+8. Your app is live! 🎉
 
 ---
 
-## 6. Verification Checklist for Judges
-1.  **Check Health:** Open `https://your-api.onrender.com/health`. Should return `{"status": "healthy"}`.
-2.  **Check DB:** Run a test screening; verify it saves to the "Reports" archive.
-3.  **Check Demo:** Press "Run Full Demo" in the Navbar. Ensure all agent steps turn green.
+## Step 6: Update Backend CORS
+
+1. Go back to Render dashboard
+2. Click on your `tarang-api` service
+3. Go to **Environment** tab
+4. Update `ALLOWED_ORIGINS` with your Vercel URL:
+   ```
+   ALLOWED_ORIGINS=https://your-app.vercel.app
+   ```
+5. Click **Save Changes** (auto-redeploys)
 
 ---
 
-## 7. CRITICAL: Fix "Embedded Git Repository" Warning
-If you saw a warning about `tarang-web` being an embedded repository (which happened in your last push), your frontend code **was not uploaded**. You must fix it now or Vercel will fail:
+## Step 7: Test Your Deployment
 
-1.  **Remove the hidden git folder in web:**
-    In your terminal (d:\Teliport), run:
-    ```bash
-    rm -rf tarang-web/.git
-    ```
-2.  **Reset the git index for the web folder:**
-    Run these commands one by one:
-    ```bash
-    git rm --cached tarang-web
-    git add tarang-web
-    git commit -m "Fix: Actually upload frontend code"
-    git push
-    ```
-    *Verified:* Refresh your GitHub. You should now be able to click into `tarang-web` and see your files.
+1. Visit your Vercel URL
+2. Test registration: Create a new account
+3. Test login: Sign in with your account
+4. Test screening: Run a screening session
+5. Test reports: View generated reports
+
+### Health Check
+Visit: `https://your-api.onrender.com/health`
+
+Should return:
+```json
+{
+  "status": "healthy",
+  "database_type": "PostgreSQL",
+  "is_production": true
+}
+```
 
 ---
-**Good luck at TELIPORT Season 3!**  
-*Your project is now officially an Always-On Enterprise Prototype.*
+
+## Step 8: Keep It Running (Optional but Recommended)
+
+Render free tier sleeps after 15 minutes of inactivity. To keep it awake:
+
+1. Go to [Cron-job.org](https://cron-job.org) (free)
+2. Create account → Add new cron job
+3. **URL:** `https://your-api.onrender.com/health`
+4. **Schedule:** Every 10 minutes
+5. Save
+
+This pings your backend every 10 minutes to keep it active.
+
+---
+
+## 🎯 Final Checklist
+
+Before sharing your app:
+
+- [ ] Backend is accessible at `/health` endpoint
+- [ ] Frontend loads without errors
+- [ ] User registration works
+- [ ] Login/logout works
+- [ ] Screening session completes
+- [ ] Reports are generated
+- [ ] WebSocket connections work (live screening)
+- [ ] No console errors in browser
+- [ ] Mobile responsive design works
+
+---
+
+## 🔒 Security Notes
+
+### What's Protected:
+✅ JWT authentication on all endpoints  
+✅ Rate limiting on login (5 req/min)  
+✅ SSL/TLS encryption (HTTPS)  
+✅ PII encrypted in database (AES-256)  
+✅ Environment variables never committed  
+✅ Secrets properly separated  
+✅ CORS properly configured  
+
+### Important:
+- Never commit `.env` files
+- Rotate secrets every 90 days
+- Monitor logs for suspicious activity
+- Keep dependencies updated
+- Use strong passwords for all accounts
+
+---
+
+## 📊 Monitoring
+
+### Logs
+**Backend:** Render dashboard → Logs tab  
+**Frontend:** Vercel dashboard → Deployments → View Function Logs
+
+### Uptime Monitoring
+Set up on [UptimeRobot](https://uptimerobot.com) or [Cron-job.org](https://cron-job.org)
+
+---
+
+## 🆘 Troubleshooting
+
+### Backend won't start
+- Check environment variables are set correctly
+- Verify DATABASE_URL format: `postgresql://user:pass@host/db?sslmode=require`
+- Check Render logs for error messages
+
+### Frontend can't reach backend
+- Verify `NEXT_PUBLIC_API_URL` matches your Render URL
+- Check CORS settings in backend `ALLOWED_ORIGINS`
+- Ensure no trailing slashes in URLs
+
+### Database connection fails
+- Verify Neon database is active
+- Check connection string includes `?sslmode=require`
+- Ensure database isn't in sleep mode (Neon free tier)
+
+### Redis connection fails
+- Verify Upstash Redis is active
+- Check if using `redis://` or `rediss://` (SSL)
+- Ensure connection string format is correct
+
+---
+
+## 📈 Scaling Up
+
+When you outgrow free tiers:
+
+### Backend (Render)
+- Upgrade to Starter ($7/month) for:
+  - No sleep time
+  - Better performance
+  - More concurrent connections
+
+### Database (Neon)
+- Pro plan ($19/month) for:
+  - More storage
+  - Better performance
+  - Branch management
+
+### Frontend (Vercel)
+- Pro plan ($20/month) for:
+  - Better analytics
+  - Team collaboration
+  - Advanced features
+
+---
+
+## 🎓 Local Development
+
+To run locally:
+
+```bash
+# 1. Clone repository
+git clone https://github.com/SRG2004/tarang-autism.git
+cd tarang-autism
+
+# 2. Set up environment files
+cp .env.example .env
+# Edit .env with your local settings
+
+# 3. Start with Docker Compose
+docker-compose up --build
+```
+
+Access:
+- Frontend: http://localhost:3000
+- Backend: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+
+---
+
+## 🎉 You're Live!
+
+Your TARANG platform is now deployed and accessible worldwide! 
+
+**Share your app:**
+- Frontend URL: `https://your-app.vercel.app`
+- API Docs: `https://your-api.onrender.com/docs`
+
+Good luck! 🚀
