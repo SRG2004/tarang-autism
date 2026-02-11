@@ -74,40 +74,47 @@ async def process_screening_industrial(
         risk_results = screening_agent.analyze_signals(video_metrics, questionnaire_score)
         clinical_summary = clinical_agent.generate_summary({"name": patient_name}, risk_results)
         
-        # 2. Persistence with new metrics
-        db_session = ScreeningSession(
-            patient_name=patient_name,
-            risk_score=risk_results["risk_score"],
-            confidence=risk_results["confidence"],
-            dissonance_factor=risk_results.get("dissonance_factor"),
-            interpretation=risk_results.get("interpretation"),
-            breakdown=risk_results["breakdown"],
-            clinical_recommendation=clinical_summary["clinical_recommendation"]
-        )
-        db.add(db_session)
-        db.commit()
-        db.refresh(db_session)
-        
-        # 3. Offload Heavy AI to Worker (optional - gracefully handle if Redis unavailable)
+        # 2. Persistence (optional - don't fail if DB is unavailable)
+        session_id = None
         try:
-            process_heavy_ai_fusion.delay(db_session.id, "s3://vids/session_id_raw.mp4")
+            db_session = ScreeningSession(
+                patient_name=patient_name,
+                risk_score=risk_results["risk_score"],
+                confidence=risk_results["confidence"],
+                dissonance_factor=risk_results.get("dissonance_factor"),
+                interpretation=risk_results.get("interpretation"),
+                breakdown=risk_results["breakdown"],
+                clinical_recommendation=clinical_summary["clinical_recommendation"]
+            )
+            db.add(db_session)
+            db.commit()
+            db.refresh(db_session)
+            session_id = db_session.id
+        except Exception as db_error:
+            logger.warning(f"DB persistence failed (non-blocking): {db_error}")
+            db.rollback()
+        
+        # 3. Offload Heavy AI to Worker (optional)
+        async_status = "Sync mode"
+        try:
+            process_heavy_ai_fusion.delay(session_id or 0, "s3://vids/session_id_raw.mp4")
             async_status = "Processing Heavy AI..."
         except Exception as worker_error:
             logger.warning(f"Celery worker unavailable: {worker_error}")
-            async_status = "Sync mode (worker unavailable)"
         
-        logger.info(f"Optimized screening processed for {patient_name}. Session ID: {db_session.id}")
+        logger.info(f"Screening processed for {patient_name}. Session ID: {session_id}")
         
         return {
-            "session_id": db_session.id,
-            "risk_results": risk_results, # Updated key name to match frontend expectation
+            "session_id": session_id,
+            "risk_results": risk_results,
             "clinical_summary": clinical_summary,
             "async_status": async_status,
-            "report_url": f"/reports/{db_session.id}"
+            "report_url": f"/reports/{session_id}" if session_id else None
         }
     except Exception as e:
         logger.error(f"Industrial processing failure: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal Scale Error")
+        raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
+
 
 @app.get("/reports/{session_id}/download")
 async def download_report(session_id: int, db: Session = Depends(get_db)):
