@@ -56,7 +56,14 @@ demo_agent = DemoAgent()
 
 @app.get("/health")
 def health_check():
-    return {"status": "operational", "timestamp": str(datetime.datetime.now())}
+    from app.database import DATABASE_URL
+    db_type = "PostgreSQL" if DATABASE_URL.startswith("postgresql") else "SQLite"
+    return {
+        "status": "operational", 
+        "timestamp": str(datetime.datetime.now()),
+        "database_type": db_type,
+        "is_production": db_type == "PostgreSQL"
+    }
 
 @app.post("/screening/process")
 @app.post("/screening/process-industrial")
