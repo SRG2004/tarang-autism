@@ -13,7 +13,35 @@ export default function ScreeningPage() {
     const [answers, setAnswers] = useState<Record<string, string>>({})
 
     const videoRef = useRef<HTMLVideoElement>(null)
+    const streamRef = useRef<MediaStream | null>(null)
     const { isLoaded, detect } = useMediaPipe()
+
+    // Start/stop camera based on step
+    useEffect(() => {
+        if (step === 2) {
+            navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+                .then(stream => {
+                    streamRef.current = stream
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = stream
+                    }
+                })
+                .catch(err => console.warn("Camera not available:", err))
+        } else {
+            // Stop camera when leaving video step
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop())
+                streamRef.current = null
+            }
+        }
+
+        return () => {
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop())
+                streamRef.current = null
+            }
+        }
+    }, [step])
 
     const steps = [
         { name: "Legal & Ethics", icon: CheckCircle2, summary: "Pediatric Data Isolation & Purpose" },
