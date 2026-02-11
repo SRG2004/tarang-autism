@@ -84,6 +84,7 @@ async def process_screening_industrial(
         # 2. Persistence (optional - don't fail if DB is unavailable)
         session_id = None
         try:
+            logger.info(f"💾 Attempting to persist screening for {patient_name} to database...")
             db_session = ScreeningSession(
                 patient_name=patient_name,
                 risk_score=risk_results["risk_score"],
@@ -97,8 +98,9 @@ async def process_screening_industrial(
             db.commit()
             db.refresh(db_session)
             session_id = db_session.id
+            logger.info(f"✅ Successfully persisted screening. Session ID: {session_id}")
         except Exception as db_error:
-            logger.warning(f"DB persistence failed (non-blocking): {db_error}")
+            logger.error(f"❌ DB persistence failed: {str(db_error)}")
             db.rollback()
         
         # 3. Offload Heavy AI to Worker (optional)
@@ -197,11 +199,19 @@ async def get_community_posts(db: Session = Depends(get_db)):
 
 @app.post("/community/post")
 async def create_post(author: str = Body(...), content: str = Body(...), db: Session = Depends(get_db)):
-    moderation = social_agent.moderate_content(content)
-    db_post = CommunityPost(author=author, content=content, is_safe=1 if moderation["safe"] else 0)
-    db.add(db_post)
-    db.commit()
-    return {"status": "Posted", "moderation": moderation}
+    try:
+        logger.info(f"📝 Attempting to create community post by {author}...")
+        moderation = social_agent.moderate_content(content)
+        db_post = CommunityPost(author=author, content=content, is_safe=1 if moderation["safe"] else 0)
+        db.add(db_post)
+        db.commit()
+        db.refresh(db_post)
+        logger.info(f"✅ Community post created. ID: {db_post.id}")
+        return {"status": "Posted", "moderation": moderation, "id": db_post.id}
+    except Exception as e:
+        logger.error(f"❌ Failed to create community post: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Post failed: {str(e)}")
 
 @app.post("/community/help")
 async def get_ai_help(query: str = Body(...)):
