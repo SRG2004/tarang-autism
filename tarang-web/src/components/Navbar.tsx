@@ -151,7 +151,7 @@ export function Navbar() {
                                     className="absolute right-0 top-14 bg-white border-2 border-[#0B3D33]/10 shadow-xl min-w-[200px] z-50"
                                 >
                                     <div className="p-4 border-b border-[#0B3D33]/10">
-                                        <p className="font-bold text-sm text-[#0B3D33]">{user.name}</p>
+                                        <p className="font-bold text-sm text-[#0B3D33]">{user.full_name}</p>
                                         <p className="text-xs text-[#0B3D33]/50">{user.email}</p>
                                         <div className="mt-2">
                                             <RoleBadge role={user.role} />

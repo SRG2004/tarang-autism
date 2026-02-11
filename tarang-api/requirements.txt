@@ -7,7 +7,9 @@ psycopg2-binary
 python-multipart
 python-jose[cryptography]
 passlib[bcrypt]
+pydantic-settings
 python-dotenv
+slowapi
 celery
 redis
 reportlab
@@ -15,3 +17,5 @@ scikit-learn
 joblib
 pandas
 ucimlrepo
+sqlalchemy-utils
+cryptography

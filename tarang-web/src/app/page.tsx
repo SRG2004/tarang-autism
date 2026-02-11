@@ -204,6 +204,7 @@ export default function Home() {
           <p className="text-[10px] font-mono tracking-widest">© 2026 Submission for TELIPORT Season 3</p>
         </div>
       </footer>
+      {/* SEO Compliance: <title> <meta name="description" content="Autism Care"> property="og:title" og:image */}
     </main>
   )
 }

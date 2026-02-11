@@ -7,14 +7,24 @@ redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 # Support for secure redis (rediss://) on Upstash/Render
 broker_use_ssl = None
 if redis_url.startswith("rediss://"):
+    # In production, always verify SSL certificates
+    # Only disable for local development with self-signed certs
+    is_production = os.getenv("ENVIRONMENT", "development") == "production"
     broker_use_ssl = {
-        "ssl_cert_reqs": ssl.CERT_NONE
+        "ssl_cert_reqs": ssl.CERT_REQUIRED if is_production else ssl.CERT_NONE
     }
+    if not is_production:
+        print("⚠️ WARNING: SSL certificate verification disabled for Redis. Enable in production!")
 
 celery_app = Celery("tarang_tasks", broker=redis_url, backend=redis_url)
 celery_app.conf.update(
     broker_use_ssl=broker_use_ssl,
-    redis_backend_use_ssl=broker_use_ssl
+    redis_backend_use_ssl=broker_use_ssl,
+    task_time_limit=300,  # 5 minutes max
+    task_soft_time_limit=240,
+    worker_concurrency=4,  # Adjust based on GPU/CPU cores
+    task_acks_late=True,
+    task_reject_on_worker_lost=True
 )
 
 @celery_app.task

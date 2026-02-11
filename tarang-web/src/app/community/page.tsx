@@ -3,15 +3,19 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Users, Send, MessageCircle, Heart, ShieldCheck, Sparkles, BookOpen } from 'lucide-react'
 import { cn, API_URL } from '@/lib/utils'
+import { useAuth, withRoleProtection } from '@/context/AuthContext'
 
-export default function CommunityHub() {
+function CommunityHub() {
     const [posts, setPosts] = useState<any[]>([])
     const [newPost, setNewPost] = useState('')
     const [chatQuery, setChatQuery] = useState('')
     const [aiSuggestions, setAiSuggestions] = useState<any[]>([])
+    const { token } = useAuth()
 
     useEffect(() => {
-        fetch(`${API_URL}/community`)
+        fetch(`${API_URL}/community`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
             .then(res => res.json())
             .then(data => setPosts(data))
     }, [])
@@ -20,7 +24,10 @@ export default function CommunityHub() {
         if (!newPost.trim()) return
         const res = await fetch(`${API_URL}/community/post`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({ author: 'James S.', content: newPost })
         })
         const data = await res.json()
@@ -186,3 +193,5 @@ export default function CommunityHub() {
 function CheckCircle(props: any) {
     return <ShieldCheck {...props} />
 }
+
+export default withRoleProtection(CommunityHub, ['PARENT', 'CLINICIAN', 'ADMIN'])

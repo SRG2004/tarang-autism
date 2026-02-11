@@ -1,253 +1,297 @@
 "use client"
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff, AlertCircle, Shield, Users } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Mail, Lock, User, ArrowRight, ArrowLeft, Shield, Users, Stethoscope, CheckCircle2, ShieldAlert } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useAuth, UserRole } from '@/context/AuthContext'
+import { cn } from '@/lib/utils'
 
 export default function RegisterPage() {
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        role: 'PARENT' as UserRole,
-        agreeToTerms: false
-    })
-    const [showPassword, setShowPassword] = useState(false)
-    const [error, setError] = useState('')
+    const [step, setStep] = useState(1)
     const [isLoading, setIsLoading] = useState(false)
+    const [error, setError] = useState('')
 
-    const router = useRouter()
+    // Form State
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [name, setName] = useState('')
+    const [role, setRole] = useState<UserRole>('PARENT')
+    const [orgLicense, setOrgLicense] = useState('')
+
+    // Metadata State
+    const [childName, setChildName] = useState('')
+    const [childAge, setChildAge] = useState('')
+    const [medicalId, setMedicalId] = useState('')
+    const [specialization, setSpecialization] = useState('')
+
     const { register } = useAuth()
 
-    const updateField = (field: string, value: any) => {
-        setFormData(prev => ({ ...prev, [field]: value }))
+    const handleNext = () => {
+        if (step === 1 && (!email || !password || !name)) {
+            setError('Please complete all identification fields.')
+            return
+        }
+        setError('')
+        setStep(s => s + 1)
+    }
+
+    const handleBack = () => {
+        setError('')
+        setStep(s => s - 1)
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
-
-        if (!formData.name || !formData.email || !formData.password) {
-            setError('Please fill in all required fields')
-            return
-        }
-
-        if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match')
-            return
-        }
-
-        if (formData.password.length < 8) {
-            setError('Password must be at least 8 characters')
-            return
-        }
-
-        if (!formData.agreeToTerms) {
-            setError('You must agree to the terms and privacy policy')
-            return
-        }
-
         setIsLoading(true)
+
         try {
-            await register(formData.email, formData.name, formData.password, formData.role)
-            router.push('/dashboard')
-        } catch (err) {
-            setError('Registration failed. Please try again.')
+            const profileMetadata = role === 'PARENT'
+                ? { child_name: childName, child_age: childAge }
+                : { medical_id: medicalId, specialization: specialization }
+
+            await register(email, name, password, role, orgLicense, profileMetadata)
+        } catch (err: any) {
+            setError(err.message || 'Registration failed. Please verify your details.')
         } finally {
             setIsLoading(false)
         }
     }
 
-    const roles = [
-        { id: 'PARENT', label: 'Parent / Guardian', icon: Users, desc: 'Manage child screening and care' },
-        { id: 'CLINICIAN', label: 'Healthcare Professional', icon: Shield, desc: 'Clinical access and reports' }
-    ]
-
     return (
-        <div className="min-h-screen bg-[#FDFCF8] flex">
-            {/* Left Panel - Branding */}
-            <div className="hidden lg:flex lg:w-1/2 bg-[#0B3D33] text-[#FDFCF8] p-16 flex-col justify-between relative overflow-hidden">
-                <div className="absolute inset-0 opacity-5">
-                    <div className="text-[20rem] font-black tracking-tighter leading-none -rotate-12 -translate-x-20 translate-y-20">
+        <div className="min-h-screen bg-[#FDFCF8] flex flex-col lg:flex-row">
+            {/* Branding Sidebar */}
+            <div className="lg:w-1/3 bg-[#0B3D33] text-[#FDFCF8] p-12 flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute inset-0 opacity-10 pointer-events-none">
+                    <div className="text-[15rem] font-black tracking-tighter leading-none -rotate-12 -translate-x-10 translate-y-40 select-none">
                         TARANG
                     </div>
                 </div>
 
                 <div className="relative z-10">
-                    <Link href="/" className="text-3xl font-serif font-black tracking-tighter">
+                    <Link href="/" className="text-2xl font-serif font-black tracking-tighter hover:text-[#D4AF37] transition-colors">
                         TARANG
                     </Link>
                 </div>
 
                 <div className="relative z-10">
-                    <h1 className="text-6xl font-serif font-black tracking-tighter leading-none mb-8">
-                        JOIN THE<br />
-                        <span className="text-[#D4AF37]">CONTINUUM.</span>
+                    <div className="flex items-center gap-3 mb-6">
+                        <span className="px-3 py-1 bg-[#D4AF37] text-[#0B3D33] font-mono text-[10px] uppercase font-black tracking-widest">
+                            Enterprise_Onboarding
+                        </span>
+                    </div>
+                    <h1 className="text-5xl font-serif font-black tracking-tighter leading-tight mb-8">
+                        Join the <br />
+                        <span className="text-[#D4AF37]">Care Continuum.</span>
                     </h1>
-                    <p className="text-xl font-light opacity-60 max-w-md leading-relaxed">
-                        Create your account to access AI-powered screening tools and personalized care pathways.
-                    </p>
+
+                    {/* Stepper Visual */}
+                    <div className="space-y-6 mt-12">
+                        {[1, 2, 3].map((s) => (
+                            <div key={s} className={cn(
+                                "flex items-center gap-4 transition-all duration-500",
+                                step === s ? "opacity-100 translate-x-2" : "opacity-30"
+                            )}>
+                                <div className={cn(
+                                    "w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-xs",
+                                    step >= s ? "bg-[#D4AF37] border-[#D4AF37] text-[#0B3D33]" : "border-white/20 text-white"
+                                )}>
+                                    {step > s ? "✓" : s}
+                                </div>
+                                <span className="text-xs font-black uppercase tracking-widest">
+                                    {s === 1 ? "Bio-Identity" : s === 2 ? "Role Scoping" : "Verification"}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
-                <div className="relative z-10 text-sm font-mono opacity-40">
-                    © 2026 TELIPORT Season 3
+                <div className="relative z-10 text-[10px] font-mono opacity-40 uppercase tracking-widest">
+                    &copy; 2026 Tarang Industrial Care
                 </div>
             </div>
 
-            {/* Right Panel - Register Form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-16 overflow-y-auto">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="w-full max-w-md py-8"
-                >
-                    <div className="mb-10">
-                        <h2 className="text-4xl font-serif font-black tracking-tighter text-[#0B3D33] mb-3">
-                            Create Account
-                        </h2>
-                        <p className="text-[#0B3D33]/60 font-medium">
-                            Start your journey with Tarang
-                        </p>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        {error && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 text-red-700"
-                            >
-                                <AlertCircle className="w-5 h-5 shrink-0" />
-                                <span className="text-sm font-medium">{error}</span>
-                            </motion.div>
-                        )}
-
-                        {/* Role Selection */}
-                        <div>
-                            <label className="block text-xs font-black uppercase tracking-widest text-[#0B3D33]/60 mb-3">
-                                I am a
-                            </label>
-                            <div className="grid grid-cols-2 gap-3">
-                                {roles.map(role => (
-                                    <button
-                                        key={role.id}
-                                        type="button"
-                                        onClick={() => updateField('role', role.id)}
-                                        className={`p-4 border-2 text-left transition-all ${formData.role === role.id
-                                            ? 'border-[#D4AF37] bg-[#D4AF37]/5'
-                                            : 'border-[#0B3D33]/10 hover:border-[#0B3D33]/30'
-                                            }`}
-                                    >
-                                        <role.icon className={`w-5 h-5 mb-2 ${formData.role === role.id ? 'text-[#D4AF37]' : 'text-[#0B3D33]/40'}`} />
-                                        <p className="font-bold text-sm text-[#0B3D33]">{role.label}</p>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Name */}
-                        <div>
-                            <label className="block text-xs font-black uppercase tracking-widest text-[#0B3D33]/60 mb-3">
-                                Full Name
-                            </label>
-                            <div className="relative">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#0B3D33]/30" />
-                                <input
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={(e) => updateField('name', e.target.value)}
-                                    className="w-full bg-white border-2 border-[#0B3D33]/10 p-4 pl-12 outline-none focus:border-[#D4AF37] transition-colors font-medium"
-                                    placeholder="James Smith"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Email */}
-                        <div>
-                            <label className="block text-xs font-black uppercase tracking-widest text-[#0B3D33]/60 mb-3">
-                                Email Address
-                            </label>
-                            <div className="relative">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#0B3D33]/30" />
-                                <input
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={(e) => updateField('email', e.target.value)}
-                                    className="w-full bg-white border-2 border-[#0B3D33]/10 p-4 pl-12 outline-none focus:border-[#D4AF37] transition-colors font-medium"
-                                    placeholder="guardian@example.com"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Password */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-black uppercase tracking-widest text-[#0B3D33]/60 mb-3">
-                                    Password
-                                </label>
-                                <div className="relative">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#0B3D33]/30" />
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        value={formData.password}
-                                        onChange={(e) => updateField('password', e.target.value)}
-                                        className="w-full bg-white border-2 border-[#0B3D33]/10 p-4 pl-12 outline-none focus:border-[#D4AF37] transition-colors font-medium"
-                                        placeholder="••••••••"
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-black uppercase tracking-widest text-[#0B3D33]/60 mb-3">
-                                    Confirm
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        value={formData.confirmPassword}
-                                        onChange={(e) => updateField('confirmPassword', e.target.value)}
-                                        className="w-full bg-white border-2 border-[#0B3D33]/10 p-4 outline-none focus:border-[#D4AF37] transition-colors font-medium"
-                                        placeholder="••••••••"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Terms */}
-                        <label className="flex items-start gap-3 cursor-pointer py-2">
-                            <input
-                                type="checkbox"
-                                checked={formData.agreeToTerms}
-                                onChange={(e) => updateField('agreeToTerms', e.target.checked)}
-                                className="w-5 h-5 accent-[#D4AF37] mt-0.5"
-                            />
-                            <span className="text-sm text-[#0B3D33]/60 leading-relaxed">
-                                I agree to the <Link href="/privacy" className="text-[#D4AF37] font-bold hover:underline">Privacy Policy</Link> and consent to pediatric data handling protocols.
-                            </span>
-                        </label>
-
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="w-full bg-[#0B3D33] text-[#D4AF37] p-5 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            {/* Form Content */}
+            <div className="w-full lg:w-2/3 flex items-center justify-center p-8 lg:p-20">
+                <div className="w-full max-w-xl">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={step}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                         >
-                            {isLoading ? 'Creating Account...' : (
-                                <>Create Account <ArrowRight className="w-5 h-5" /></>
+                            {error && (
+                                <div className="mb-8 p-4 bg-red-50 border-l-4 border-red-500 flex items-center gap-3 text-red-700 animate-in fade-in slide-in-from-top-2">
+                                    <ShieldAlert className="w-5 h-5 shrink-0" />
+                                    <p className="text-sm font-bold">{error}</p>
+                                </div>
                             )}
-                        </button>
-                    </form>
 
-                    <div className="mt-8 text-center">
-                        <p className="text-[#0B3D33]/60 font-medium">
-                            Already have an account?{' '}
-                            <Link href="/login" className="font-bold text-[#0B3D33] hover:text-[#D4AF37] transition-colors">
+                            {step === 1 && (
+                                <div className="space-y-10">
+                                    <div>
+                                        <h2 className="text-4xl font-serif font-black text-[#0B3D33] tracking-tighter mb-2">Identify Yourself</h2>
+                                        <p className="text-[#0B3D33]/60 font-medium">Basic credentials for your secure portal access.</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-[#0B3D33]/40">Full Name</label>
+                                            <div className="relative">
+                                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0B3D33]/30" />
+                                                <input value={name} onChange={e => setName(e.target.value)} className="w-full p-4 pl-12 bg-white border-2 border-[#0B3D33]/5 focus:border-[#D4AF37] outline-none transition-all font-medium" placeholder="Elias Thorne" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-[#0B3D33]/40">Email Address</label>
+                                            <div className="relative">
+                                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0B3D33]/30" />
+                                                <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-4 pl-12 bg-white border-2 border-[#0B3D33]/5 focus:border-[#D4AF37] outline-none transition-all font-medium" placeholder="elias@domain.com" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2 col-span-full">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-[#0B3D33]/40">Set Password</label>
+                                            <div className="relative">
+                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0B3D33]/30" />
+                                                <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-4 pl-12 bg-white border-2 border-[#0B3D33]/5 focus:border-[#D4AF37] outline-none transition-all font-medium" placeholder="••••••••" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={handleNext} className="w-full bg-[#0B3D33] text-[#D4AF37] p-5 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all flex items-center justify-center gap-4">
+                                        Next Context <ArrowRight className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            )}
+
+                            {step === 2 && (
+                                <div className="space-y-10">
+                                    <div>
+                                        <h2 className="text-4xl font-serif font-black text-[#0B3D33] tracking-tighter mb-2">Scope Participation</h2>
+                                        <p className="text-[#0B3D33]/60 font-medium">Select your role to unlock specialized tools.</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button
+                                            onClick={() => setRole('PARENT')}
+                                            className={cn(
+                                                "p-8 border-2 flex flex-col items-center gap-4 transition-all relative overflow-hidden",
+                                                role === 'PARENT' ? "border-[#D4AF37] bg-[#D4AF37]/5" : "border-[#0B3D33]/5 hover:border-[#0B3D33]/20"
+                                            )}
+                                        >
+                                            <Users className={cn("w-10 h-10", role === 'PARENT' ? "text-[#D4AF37]" : "text-[#0B3D33]/20")} />
+                                            <span className="font-black uppercase tracking-widest text-xs">Parent / Guardian</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setRole('CLINICIAN')}
+                                            className={cn(
+                                                "p-8 border-2 flex flex-col items-center gap-4 transition-all relative overflow-hidden",
+                                                role === 'CLINICIAN' ? "border-[#D4AF37] bg-[#D4AF37]/5" : "border-[#0B3D33]/5 hover:border-[#0B3D33]/20"
+                                            )}
+                                        >
+                                            <Stethoscope className={cn("w-10 h-10", role === 'CLINICIAN' ? "text-[#D4AF37]" : "text-[#0B3D33]/20")} />
+                                            <span className="font-black uppercase tracking-widest text-xs">Professional</span>
+                                        </button>
+                                    </div>
+
+                                    <div className="p-10 bg-white border-2 border-dashed border-[#0B3D33]/10">
+                                        <AnimatePresence mode="wait">
+                                            {role === 'PARENT' ? (
+                                                <motion.div key="parent" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#0B3D33]/40">Child's Name (Optional)</label>
+                                                        <input value={childName} onChange={e => setChildName(e.target.value)} className="w-full p-4 bg-[#FDFCF8] border border-[#0B3D33]/10 outline-none focus:border-[#D4AF37] font-medium" placeholder="e.g. Arvid" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#0B3D33]/40">Child's Age</label>
+                                                        <input type="number" value={childAge} onChange={e => setChildAge(e.target.value)} className="w-full p-4 bg-[#FDFCF8] border border-[#0B3D33]/10 outline-none focus:border-[#D4AF37] font-medium" placeholder="Years" />
+                                                    </div>
+                                                </motion.div>
+                                            ) : (
+                                                <motion.div key="clinician" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#0B3D33]/40">Medical License ID</label>
+                                                        <input value={medicalId} onChange={e => setMedicalId(e.target.value)} className="w-full p-4 bg-[#FDFCF8] border border-[#0B3D33]/10 outline-none focus:border-[#D4AF37] font-medium" placeholder="MED-RX-9921" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#0B3D33]/40">Specialization</label>
+                                                        <input value={specialization} onChange={e => setSpecialization(e.target.value)} className="w-full p-4 bg-[#FDFCF8] border border-[#0B3D33]/10 outline-none focus:border-[#D4AF37] font-medium" placeholder="e.g. Pediatric Neurology" />
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+
+                                    <div className="flex gap-4">
+                                        <button onClick={handleBack} className="p-5 border-2 border-[#0B3D33] text-[#0B3D33] font-black uppercase tracking-widest hover:bg-[#0B3D33] hover:text-white transition-all flex-1">
+                                            Return
+                                        </button>
+                                        <button onClick={handleNext} className="p-5 bg-[#0B3D33] text-[#D4AF37] font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all flex-1 flex items-center justify-center gap-4">
+                                            Final Validate <ArrowRight className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === 3 && (
+                                <div className="space-y-10">
+                                    <div className="text-center">
+                                        <div className="w-20 h-20 bg-[#D4AF37]/20 rounded-full flex items-center justify-center mx-auto mb-8">
+                                            <Shield className="w-10 h-10 text-[#0B3D33]" />
+                                        </div>
+                                        <h2 className="text-4xl font-serif font-black text-[#0B3D33] tracking-tighter mb-2 italic">Confirm Authorization</h2>
+                                        <p className="text-[#0B3D33]/60 font-medium">Final security handshake before account creation.</p>
+                                    </div>
+
+                                    {role === 'CLINICIAN' && (
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-[#0B3D33]/40">Organization License Key</label>
+                                            <div className="relative">
+                                                <CheckCircle2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#D4AF37]" />
+                                                <input value={orgLicense} onChange={e => setOrgLicense(e.target.value)} className="w-full p-5 pl-12 bg-white border-2 border-[#D4AF37] outline-none font-bold tracking-widest uppercase" placeholder="ALPHA-XXXX-XXXX" />
+                                            </div>
+                                            <p className="text-[9px] font-mono text-[#0B3D33]/40">Contact your clinical administrator for your organization's unique key.</p>
+                                        </div>
+                                    )}
+
+                                    <div className="p-8 bg-[#0B3D33]/5 space-y-4">
+                                        <div className="flex items-start gap-4">
+                                            <input type="checkbox" required className="w-5 h-5 mt-1 accent-[#D4AF37]" />
+                                            <p className="text-xs font-medium leading-relaxed opacity-60">I acknowledge that Tarang uses AI-assisted screening tools and clinical data handles adhere to PHI isolation protocols.</p>
+                                        </div>
+                                        <div className="flex items-start gap-4">
+                                            <input type="checkbox" required className="w-5 h-5 mt-1 accent-[#D4AF37]" />
+                                            <p className="text-xs font-medium leading-relaxed opacity-60">I agree to the Terms of Service and Privacy Policy for pediatric diagnostic support.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-4">
+                                        <button onClick={handleBack} className="p-5 border-2 border-[#0B3D33] text-[#0B3D33] font-black uppercase tracking-widest hover:bg-[#0B3D33] hover:text-white transition-all flex-1">
+                                            Adjust
+                                        </button>
+                                        <button
+                                            onClick={handleSubmit}
+                                            disabled={isLoading}
+                                            className="p-5 bg-[#0B3D33] text-[#D4AF37] font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all flex-1 flex items-center justify-center gap-4 disabled:opacity-50"
+                                        >
+                                            {isLoading ? "Authenticating..." : "Establish Account"}
+                                            {!isLoading && <ArrowRight className="w-5 h-5" />}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
+
+                    <div className="mt-16 text-center">
+                        <p className="text-[#0B3D33]/40 text-xs font-medium">
+                            Already part of the network? {' '}
+                            <Link href="/login" className="text-[#0B3D33] font-black uppercase tracking-widest hover:text-[#D4AF37] transition-colors ml-2 border-b-2 border-[#D4AF37]">
                                 Sign In
                             </Link>
                         </p>
                     </div>
-                </motion.div>
+                </div>
             </div>
         </div>
     )

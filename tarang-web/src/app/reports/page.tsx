@@ -1,10 +1,12 @@
 "use client"
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { FileText, Download, Filter } from 'lucide-react'
+import { FileText, Download, Filter, ChevronRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { cn, API_URL } from '@/lib/utils'
 
 export default function ReportsPage() {
+    const router = useRouter()
     const [downloading, setDownloading] = useState<number | null>(null)
     const reports = [
         { id: 1, sid: '#TR-8821', date: 'Jan 25, 2026', type: 'Clinical Fusion', patient: 'Arvid Smith', risk: '72.4%', status: 'Available' },
@@ -67,7 +69,7 @@ export default function ReportsPage() {
                             <motion.div
                                 key={idx}
                                 whileHover={{ backgroundColor: "#FDFCF8" }}
-                                onClick={() => handleDownload(report.id)}
+                                onClick={() => router.push(`/reports/${report.id}`)}
                                 className="grid grid-cols-12 gap-4 p-8 items-center group cursor-pointer"
                             >
                                 <div className="col-span-2 font-mono text-xs font-bold">{report.sid}</div>
@@ -83,12 +85,21 @@ export default function ReportsPage() {
                                         report.status === 'Available' ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
                                     )}>{report.status}</span>
                                 </div>
-                                <div className="col-span-1 flex justify-end">
-                                    {downloading === report.id ? (
-                                        <div className="w-5 h-5 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                        <Download className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity text-[#D4AF37]" />
-                                    )}
+                                <div className="col-span-1 flex justify-end gap-4">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleDownload(report.id)
+                                        }}
+                                        className="p-2 hover:bg-[#D4AF37]/10 transition-all rounded-full"
+                                    >
+                                        {downloading === report.id ? (
+                                            <div className="w-5 h-5 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+                                        ) : (
+                                            <Download className="w-5 h-5 text-[#D4AF37]" />
+                                        )}
+                                    </button>
+                                    <ChevronRight className="w-5 h-5 opacity-20 group-hover:opacity-100 transition-opacity text-[#0B3D33]" />
                                 </div>
                             </motion.div>
                         ))}

@@ -1,0 +1,59 @@
+# Environment files - NEVER COMMIT SECRETS
+.env
+.env.*
+!.env.example
+
+# Database files
+*.db
+*.sqlite3
+tarang.db
+
+# Logs
+*.log
+api.log
+web.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.pyc
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kubernetes (if using local configs)
+.k8s/
+
+# Node modules
+node_modules/
+
+# Build outputs
+build/
+dist/
+.next/
+out/
+
+# Test and verification scripts (not needed in production)
+test_db.py
+verify_*.py
+seed_*.py
+
+# Temporary documentation (keep only main README and DEPLOYMENT)
+AUDIT_*.md
+DEPLOYMENT_READY.md
+ENTERPRISE_*.md

@@ -51,8 +51,8 @@ export default function ProfilePage() {
                     <button
                         onClick={() => setIsEditing(!isEditing)}
                         className={`flex items-center gap-2 px-6 py-3 font-black uppercase tracking-widest text-sm transition-all ${isEditing
-                                ? 'bg-red-50 text-red-600 border-2 border-red-200'
-                                : 'bg-[#0B3D33] text-[#D4AF37]'
+                            ? 'bg-red-50 text-red-600 border-2 border-red-200'
+                            : 'bg-[#0B3D33] text-[#D4AF37]'
                             }`}
                     >
                         {isEditing ? <><X className="w-4 h-4" /> Cancel</> : <><Edit2 className="w-4 h-4" /> Edit</>}
@@ -67,7 +67,7 @@ export default function ProfilePage() {
                         </div>
                         <div>
                             <h2 className="text-3xl font-serif font-black text-[#0B3D33] mb-2">
-                                {user?.name || 'User'}
+                                {user?.full_name || 'User'}
                             </h2>
                             <span className="inline-block px-3 py-1 bg-[#D4AF37]/20 text-[#0B3D33] text-xs font-black uppercase tracking-widest">
                                 {user?.role || 'PARENT'}

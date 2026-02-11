@@ -75,3 +75,33 @@ class OutcomeAgent:
         elif "Improving" in trend:
             return f"PROGRESS: Stable trajectory detected ({trend}). Continue current intervention plan."
         return "Baseline established. Continue monitoring for 2 additional weeks."
+
+    def analyze_intervention_efficacy(self, progress_history: List[Dict]) -> Dict:
+        """
+        Analyzes drift between Actual vs Expected engagement KPIs.
+        """
+        if len(progress_history) < 2:
+            return {"drift_status": "Insufficient Data", "intervention_efficacy": 1.0}
+
+        engagements = [p.get('social_engagement', 0.5) for p in progress_history]
+        attentions = [p.get('joint_attention', 0.5) for p in progress_history]
+        drifts = [p.get('focus_drift', 0.1) for p in progress_history]
+
+        recent_avg = np.mean(engagements[-2:])
+        baseline_avg = np.mean(engagements[:2])
+        
+        efficacy_score = recent_avg / (baseline_avg + 1e-6)
+        focus_stability = 1.0 - np.mean(drifts)
+
+        status = "Optimal"
+        if efficacy_score < 0.8:
+            status = "Drifting (Negative)"
+        elif efficacy_score > 1.2:
+            status = "Accelerated"
+
+        return {
+            "drift_status": status,
+            "intervention_efficacy": float(round(efficacy_score, 2)),
+            "focus_stability": float(round(focus_stability, 2)),
+            "social_velocity": float(round(np.gradient(engagements)[-1], 4)) if len(engagements) > 1 else 0.0
+        }

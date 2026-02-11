@@ -7,7 +7,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    networks:
+      - frontend_net
     depends_on:
       - api
 
@@ -21,12 +23,21 @@ services:
     volumes:
       - ./tarang-api:/app
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/tarang
-      - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=INDUSTRIAL_SECRET_K3Y_FOR_TELIPORT
+      - DATABASE_URL=postgresql://${DB_USER:-user}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-tarang}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-tarang_redis_secret}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
+    networks:
+      - frontend_net
+      - backend_net
     depends_on:
       - db
       - redis
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Background Workers
   worker:
@@ -35,8 +46,10 @@ services:
       dockerfile: Dockerfile
     command: celery -A app.worker worker --loglevel=info
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/tarang
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://${DB_USER:-user}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-tarang}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-tarang_redis_secret}@redis:6379/0
+    networks:
+      - backend_net
     depends_on:
       - redis
       - db
@@ -45,15 +58,35 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=tarang
+      - POSTGRES_USER=${DB_USER:-user}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
+      - POSTGRES_DB=${DB_NAME:-tarang}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend_net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-user} -d ${DB_NAME:-tarang}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Message Broker
   redis:
     image: redis:7-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD:-tarang_redis_secret}
+    networks:
+      - backend_net
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  frontend_net:
+  backend_net:
+    internal: true
 
 volumes:
   postgres_data:

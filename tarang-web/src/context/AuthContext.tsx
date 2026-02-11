@@ -1,4 +1,5 @@
 "use client"
+/** aria-label: Authentication Context Provider */
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 
@@ -7,9 +8,10 @@ export type UserRole = 'PARENT' | 'CLINICIAN' | 'ADMIN'
 interface User {
     id: string
     email: string
-    name: string
+    full_name: string
     role: UserRole
     initials: string
+    org_id?: number
 }
 
 interface AuthContextType {
@@ -17,8 +19,8 @@ interface AuthContextType {
     token: string | null
     isAuthenticated: boolean
     isLoading: boolean
-    login: (email: string, password: string, role: UserRole) => Promise<void>
-    register: (email: string, name: string, password: string, role: UserRole) => Promise<void>
+    login: (email: string, password: string) => Promise<void>
+    register: (email: string, name: string, password: string, role: UserRole, orgLicense?: string, profileMetadata?: Record<string, any>) => Promise<void>
     logout: () => void
     hasRole: (roles: UserRole[]) => boolean
     redirectByRole: () => void
@@ -91,48 +93,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }, [pathname, user, isLoading, router])
 
-    const login = async (email: string, password: string, role: UserRole) => {
-        // In production, this would call the backend API with credentials
-        // Backend would validate and return user with their actual role
-        const mockUser: User = {
-            id: `usr_${Date.now()}`,
-            email,
-            name: email.split('@')[0].replace(/[.]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-            role: role,
-            initials: email.substring(0, 2).toUpperCase()
+    const login = async (email: string, password: string) => {
+        setIsLoading(true)
+        try {
+            const formData = new FormData()
+            formData.append('username', email)
+            formData.append('password', password)
+
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/token`, {
+                method: 'POST',
+                body: formData
+            })
+
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.detail || 'Login failed')
+            }
+
+            const data = await response.json()
+            const token = data.access_token
+
+            // Decodes JWT locally to get user info (sub, role, org_id)
+            const payload = JSON.parse(atob(token.split('.')[1]))
+
+            const loggedInUser: User = {
+                id: payload.sub, // sub is email in our backend
+                email: payload.sub,
+                full_name: payload.sub.split('@')[0],
+                role: payload.role.toUpperCase() as UserRole,
+                org_id: payload.org_id,
+                initials: payload.sub.substring(0, 2).toUpperCase()
+            }
+
+            setToken(token)
+            setUser(loggedInUser)
+            localStorage.setItem('tarang_token', token)
+            localStorage.setItem('tarang_user', JSON.stringify(loggedInUser))
+
+            const roleConfig = ROLE_ROUTES[loggedInUser.role]
+            router.push(roleConfig.home)
+        } catch (error) {
+            console.error('Login error:', error)
+            throw error
+        } finally {
+            setIsLoading(false)
         }
-
-        const mockToken = `jwt_${btoa(email)}_${role}_${Date.now()}`
-
-        setUser(mockUser)
-        setToken(mockToken)
-        localStorage.setItem('tarang_token', mockToken)
-        localStorage.setItem('tarang_user', JSON.stringify(mockUser))
-
-        // Redirect based on role
-        const roleConfig = ROLE_ROUTES[role]
-        router.push(roleConfig.home)
     }
 
-    const register = async (email: string, name: string, password: string, role: UserRole) => {
-        const mockUser: User = {
-            id: `usr_${Date.now()}`,
-            email,
-            name,
-            role: role,
-            initials: name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+    const register = async (email: string, name: string, password: string, role: UserRole, orgLicense?: string, profileMetadata?: Record<string, any>) => {
+        setIsLoading(true)
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    full_name: name,
+                    role: role.toLowerCase(),
+                    org_license: orgLicense,
+                    profile_metadata: profileMetadata
+                })
+            })
+
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.detail || 'Registration failed')
+            }
+
+            // After register, perform login
+            await login(email, password)
+        } catch (error) {
+            console.error('Registration error:', error)
+            throw error
+        } finally {
+            setIsLoading(false)
         }
-
-        const mockToken = `jwt_${btoa(email)}_${role}_${Date.now()}`
-
-        setUser(mockUser)
-        setToken(mockToken)
-        localStorage.setItem('tarang_token', mockToken)
-        localStorage.setItem('tarang_user', JSON.stringify(mockUser))
-
-        // Redirect based on role
-        const roleConfig = ROLE_ROUTES[role]
-        router.push(roleConfig.home)
     }
 
     const logout = () => {

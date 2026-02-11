@@ -12,8 +12,11 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState('')
     const [isLoading, setIsLoading] = useState(false)
+    const [isRegister, setIsRegister] = useState(false)
+    const [name, setName] = useState('')
+    const [orgLicense, setOrgLicense] = useState('')
 
-    const { login, isAuthenticated, redirectByRole } = useAuth()
+    const { login, register, isAuthenticated, redirectByRole } = useAuth()
 
     // If already authenticated, redirect
     if (isAuthenticated) {
@@ -38,10 +41,13 @@ export default function LoginPage() {
 
         setIsLoading(true)
         try {
-            await login(email, password, selectedRole)
-            // Redirect happens automatically in AuthContext
-        } catch (err) {
-            setError('Invalid credentials. Please try again.')
+            if (isRegister) {
+                await register(email, name, password, selectedRole, orgLicense)
+            } else {
+                await login(email, password)
+            }
+        } catch (err: any) {
+            setError(err.message || 'Invalid credentials. Please try again.')
         } finally {
             setIsLoading(false)
         }
@@ -129,8 +135,8 @@ export default function LoginPage() {
                                         type="button"
                                         onClick={() => setSelectedRole(role.id)}
                                         className={`p-4 border-2 text-center transition-all ${selectedRole === role.id
-                                                ? 'border-[#D4AF37] bg-[#D4AF37]/10'
-                                                : 'border-[#0B3D33]/10 hover:border-[#0B3D33]/30'
+                                            ? 'border-[#D4AF37] bg-[#D4AF37]/10'
+                                            : 'border-[#0B3D33]/10 hover:border-[#0B3D33]/30'
                                             }`}
                                     >
                                         <role.icon className={`w-6 h-6 mx-auto mb-2 ${selectedRole === role.id ? 'text-[#D4AF37]' : 'text-[#0B3D33]/40'}`} />
@@ -176,10 +182,27 @@ export default function LoginPage() {
                                     onClick={() => setShowPassword(!showPassword)}
                                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#0B3D33]/30 hover:text-[#0B3D33] transition-colors"
                                 >
-                                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                 </button>
                             </div>
                         </div>
+
+                        {isRegister && selectedRole !== 'PARENT' && (
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                                <label className="block text-xs font-black uppercase tracking-widest text-[#0B3D33]/60 mb-3">
+                                    Organization License Key
+                                </label>
+                                <div className="relative">
+                                    <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#0B3D33]/30" />
+                                    <input
+                                        type="text"
+                                        value={orgLicense}
+                                        onChange={(e) => setOrgLicense(e.target.value)}
+                                        className="w-full bg-white border-2 border-[#0B3D33]/10 p-4 pl-12 outline-none focus:border-[#D4AF37] transition-colors font-medium"
+                                        placeholder="ALPHA-XXXX-XXXX"
+                                    />
+                                </div>
+                            </motion.div>
+                        )}
 
                         <div className="flex justify-between items-center">
                             <label className="flex items-center gap-2 cursor-pointer">
@@ -196,8 +219,8 @@ export default function LoginPage() {
                             disabled={isLoading}
                             className="w-full bg-[#0B3D33] text-[#D4AF37] p-5 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isLoading ? 'Signing in...' : (
-                                <>Sign In as {selectedRole} <ArrowRight className="w-5 h-5" /></>
+                            {isLoading ? (isRegister ? 'Joining...' : 'Signing in...') : (
+                                <>{isRegister ? 'Create Account' : 'Sign In'} as {selectedRole} <ArrowRight className="w-5 h-5" /></>
                             )}
                         </button>
                     </form>
@@ -205,7 +228,10 @@ export default function LoginPage() {
                     <div className="mt-10 text-center">
                         <p className="text-[#0B3D33]/60 font-medium">
                             Don't have an account?{' '}
-                            <Link href="/register" className="font-bold text-[#0B3D33] hover:text-[#D4AF37] transition-colors">
+                            <Link
+                                href="/register"
+                                className="font-bold text-[#0B3D33] hover:text-[#D4AF37] transition-colors underline underline-offset-4"
+                            >
                                 Create Account
                             </Link>
                         </p>

@@ -5,12 +5,14 @@ import { useMediaPipe } from '@/hooks/use-mediapipe'
 import { ArrowLeft, ArrowRight, CheckCircle2, Video, FileText, Brain, Loader2, Info, Eye, Zap } from 'lucide-react'
 import { cn, API_URL } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuth, withRoleProtection } from '@/context/AuthContext'
 
-export default function ScreeningPage() {
+function ScreeningPage() {
     const [step, setStep] = useState(0)
     const [loading, setLoading] = useState(false)
     const [results, setResults] = useState<any>(null)
     const [answers, setAnswers] = useState<Record<string, string>>({})
+    const { token } = useAuth()
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const streamRef = useRef<MediaStream | null>(null)
@@ -58,7 +60,10 @@ export default function ScreeningPage() {
             try {
                 const response = await fetch(`${API_URL}/screening/process`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: JSON.stringify({
                         video_metrics: { eye_contact: 0.65, motor_coordination: 0.8 },
                         questionnaire_score: 12,
@@ -347,3 +352,5 @@ export default function ScreeningPage() {
         </div>
     )
 }
+
+export default withRoleProtection(ScreeningPage, ['PARENT', 'CLINICIAN', 'ADMIN'])
