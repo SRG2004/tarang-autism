@@ -58,7 +58,7 @@ export default function ScreeningPage() {
     const handleBack = () => setStep(s => s - 1)
 
     return (
-        <div className="min-h-screen pt-32 px-8 md:px-16 lg:px-24 pb-32 max-w-7xl mx-auto">
+        <div className="min-h-screen pt-32 px-8 md:px-16 lg:px-24 pb-32 max-w-7xl mx-auto relative z-10">
 
             {/* Step Indicator - Vertical Navigation Style */}
             <div className="flex flex-col lg:flex-row gap-20">
@@ -110,16 +110,16 @@ export default function ScreeningPage() {
                                     </p>
                                     <div className="space-y-6 mb-12 group cursor-pointer p-8 bg-[#FDFCF8] border border-dashed border-[#0B3D33]/20">
                                         <div className="flex items-start gap-4">
-                                            <input type="checkbox" id="c1" className="w-6 h-6 mt-1 accent-[#D4AF37]" />
+                                            <input type="checkbox" id="c1" className="w-6 h-6 mt-1 accent-[#D4AF37] cursor-pointer relative z-20" />
                                             <label htmlFor="c1" className="font-bold text-[#0B3D33] leading-snug">I confirm I am the legal guardian and consent to the use of AI for behavioral screening.</label>
                                         </div>
                                         <div className="flex items-start gap-4">
-                                            <input type="checkbox" id="c2" className="w-6 h-6 mt-1 accent-[#D4AF37]" />
+                                            <input type="checkbox" id="c2" className="w-6 h-6 mt-1 accent-[#D4AF37] cursor-pointer relative z-20" />
                                             <label htmlFor="c2" className="font-bold text-[#0B3D33] leading-snug">I understand the results are for Clinical Support only and do not constitute a diagnosis.</label>
                                         </div>
                                     </div>
                                     <div className="flex gap-4">
-                                        <button onClick={handleNext} className="bg-[#0B3D33] text-[#D4AF37] px-10 py-5 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all">
+                                        <button type="button" onClick={handleNext} className="bg-[#0B3D33] text-[#D4AF37] px-10 py-5 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all cursor-pointer relative z-20">
                                             Initialize Session
                                         </button>
                                     </div>
@@ -135,7 +135,7 @@ export default function ScreeningPage() {
                                             <p className="text-2xl font-serif font-bold">Does your child show objects to you by holding them up?</p>
                                             <div className="flex flex-wrap gap-4">
                                                 {["Rarely", "Occasionally", "Frequently", "Always"].map(opt => (
-                                                    <button key={opt} className="px-8 py-3 border-2 border-[#0B3D33] text-[#0B3D33] font-black uppercase text-[10px] tracking-widest hover:bg-[#D4AF37] hover:border-[#D4AF37] hover:text-white transition-all">
+                                                    <button type="button" key={opt} className="px-8 py-3 border-2 border-[#0B3D33] text-[#0B3D33] font-black uppercase text-[10px] tracking-widest hover:bg-[#D4AF37] hover:border-[#D4AF37] hover:text-white transition-all cursor-pointer relative z-20">
                                                         {opt}
                                                     </button>
                                                 ))}
@@ -146,7 +146,7 @@ export default function ScreeningPage() {
                                             <p className="text-2xl font-serif font-bold">Have you noticed unusual repetitive body movements?</p>
                                             <div className="flex flex-wrap gap-4">
                                                 {["No", "Yes, subtle", "Yes, frequent"].map(opt => (
-                                                    <button key={opt} className="px-8 py-3 border-2 border-[#0B3D33] text-[#0B3D33] font-black uppercase text-[10px] tracking-widest hover:bg-[#D4AF37] transition-all">
+                                                    <button type="button" key={opt} className="px-8 py-3 border-2 border-[#0B3D33] text-[#0B3D33] font-black uppercase text-[10px] tracking-widest hover:bg-[#D4AF37] transition-all cursor-pointer relative z-20">
                                                         {opt}
                                                     </button>
                                                 ))}
@@ -154,8 +154,8 @@ export default function ScreeningPage() {
                                         </div>
                                     </div>
                                     <div className="flex gap-4">
-                                        <button onClick={handleBack} className="px-10 py-5 border-2 border-[#0B3D33] font-black uppercase tracking-widest hover:bg-[#0B3D33] hover:text-white transition-all">Back</button>
-                                        <button onClick={handleNext} className="bg-[#0B3D33] text-[#D4AF37] px-10 py-5 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all flex items-center gap-3">
+                                        <button type="button" onClick={handleBack} className="px-10 py-5 border-2 border-[#0B3D33] font-black uppercase tracking-widest hover:bg-[#0B3D33] hover:text-white transition-all cursor-pointer relative z-20">Back</button>
+                                        <button type="button" onClick={handleNext} className="bg-[#0B3D33] text-[#D4AF37] px-10 py-5 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all flex items-center gap-3 cursor-pointer relative z-20">
                                             Continue to Vision <ArrowRight className="w-5 h-5" />
                                         </button>
                                     </div>
@@ -199,7 +199,7 @@ export default function ScreeningPage() {
                                     </p>
 
                                     <div className="flex gap-4">
-                                        <button onClick={handleNext} className="bg-[#0B3D33] text-[#D4AF37] px-12 py-6 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all">
+                                        <button type="button" onClick={handleNext} className="bg-[#0B3D33] text-[#D4AF37] px-12 py-6 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all cursor-pointer relative z-20">
                                             Commit Behavioral Frame
                                         </button>
                                     </div>
@@ -223,9 +223,10 @@ export default function ScreeningPage() {
                                         Integrating simulated EEG bandpower (Alpha/Theta ratios) to refine the risk scoring alignment.
                                     </p>
                                     <button
+                                        type="button"
                                         onClick={handleNext}
                                         disabled={loading}
-                                        className="bg-[#0B3D33] text-[#D4AF37] px-16 py-8 text-2xl font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all flex items-center justify-center gap-6 mx-auto min-w-[350px]"
+                                        className="bg-[#0B3D33] text-[#D4AF37] px-16 py-8 text-2xl font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all flex items-center justify-center gap-6 mx-auto min-w-[350px] cursor-pointer relative z-20"
                                     >
                                         {loading ? <Loader2 className="w-8 h-8 animate-spin" /> : "Initiate Final Fusion"}
                                         {!loading && <Zap className="w-8 h-8" />}
