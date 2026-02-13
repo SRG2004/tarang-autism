@@ -22,7 +22,7 @@ from app.security import (
 )
 from app.database import (
     SessionLocal, ScreeningSession, ClinicCenter, CommunityPost,
-    User, Organization, Patient
+    User, Organization, Patient, init_db
 )
 from fastapi.security import OAuth2PasswordRequestForm
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -68,6 +68,10 @@ app = FastAPI(
     version="1.0.0",
     description="Enterprise-grade Autism Care Continuum API"
 )
+
+@app.on_event("startup")
+def on_startup():
+    init_db()
 
 # CORS must be added FIRST so it wraps all responses (including error responses)
 if isinstance(settings.ALLOWED_ORIGINS, str):
