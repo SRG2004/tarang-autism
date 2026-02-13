@@ -28,7 +28,7 @@ if DATABASE_URL.startswith("sqlite"):
 else:
     print(f"🐘 Using production PostgreSQL database.")
     # PostgreSQL for production (Render/Neon)
-    engine = create_engine(DATABASE_URL)
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
