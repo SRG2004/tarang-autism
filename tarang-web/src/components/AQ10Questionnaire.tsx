@@ -145,14 +145,14 @@ export default function AQ10Questionnaire({ responses, onResponseChange, onCompl
                             ].map((option, optIndex) => (
                                 <button
                                     key={optIndex}
-                                    onClick={() => onResponseChange(index, option.value)}
-                                    className={`p-4 border-2 transition-all text-sm font-bold uppercase tracking-widest ${responses[index] === option.value
+                                    onClick={() => onResponseChange(index, optIndex)}
+                                    className={`p-4 border-2 transition-all text-sm font-bold uppercase tracking-widest ${responses[index] === optIndex
                                         ? 'bg-[#D4AF37] border-[#D4AF37] text-[#0B3D33]'
                                         : 'border-[#0B3D33]/20 text-[#0B3D33]/60 hover:border-[#D4AF37]/50'
                                         }`}
                                 >
                                     <div className="flex items-center justify-center gap-2">
-                                        {responses[index] === option.value ? (
+                                        {responses[index] === optIndex ? (
                                             <CheckCircle2 className="w-4 h-4" />
                                         ) : (
                                             <Circle className="w-4 h-4" />

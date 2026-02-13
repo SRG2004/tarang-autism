@@ -435,6 +435,7 @@ async def process_screening_industrial(
         
         logger.info("Screening process complete", extra={"patient": re.sub(r"[^\w]", "_", patient_name), "session_id": session_id})
         
+        return {
             "session_id": session_id,
             "risk_results": risk_results,
             "clinical_summary": clinical_summary,
@@ -684,7 +685,8 @@ async def get_patient_prediction(
         "patient": patient_name,
         "historical_count": len(sessions),
         "prediction": prediction,
-        "clinical_insight": alert
+        "clinical_insight": alert,
+        "history": scores # Return raw scores for frontend charting
     }
 
 @app.get("/centers")

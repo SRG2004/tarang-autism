@@ -1,0 +1,1 @@
+import ast; ast.parse(open("tarang-api/app/main.py",encoding="utf-8").read()); print("OK")

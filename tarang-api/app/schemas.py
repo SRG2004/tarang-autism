@@ -27,6 +27,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+    sub: Optional[str] = None
     role: Optional[str] = None
     org_id: Optional[int] = None
 

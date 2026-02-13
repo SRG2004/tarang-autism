@@ -26,16 +26,29 @@ export default function IntelligenceDashboard() {
             .catch(err => console.warn('Centers fetch failed:', err))
     }, [token])
 
-    const combinedData = [
-        { name: 'W1', actual: 38 },
-        { name: 'W2', actual: 42 },
-        { name: 'W3', actual: 35 },
-        { name: 'W4', actual: 55 },
-        { name: 'W5', pred: 62 },
-        { name: 'W6', pred: 68 },
-        { name: 'W7', pred: 74 },
-        { name: 'W8', pred: 80 },
-    ]
+    const [chartData, setChartData] = useState<any[]>([])
+
+    useEffect(() => {
+        if (!prediction) return
+
+        // Transform history and prediction into chart format
+        const history = prediction.history || []
+        const future = prediction.prediction?.predicted_scores || []
+
+        const data = history.map((score: number, i: number) => ({
+            name: `W${i + 1}`,
+            actual: score
+        }))
+
+        future.forEach((score: number, i: number) => {
+            data.push({
+                name: `W${history.length + i + 1}`,
+                pred: score
+            })
+        })
+
+        setChartData(data)
+    }, [prediction])
 
     return (
         <div className="min-h-screen bg-[#FDFCF8] pt-32 px-8 md:px-16 lg:px-24 pb-20">
@@ -68,7 +81,7 @@ export default function IntelligenceDashboard() {
 
                             <div className="h-[400px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={combinedData}>
+                                    <LineChart data={chartData}>
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 900 }} />
                                         <YAxis hide domain={[0, 100]} />
                                         <Tooltip contentStyle={{ borderRadius: 0, border: '2px solid #0B3D33' }} />
