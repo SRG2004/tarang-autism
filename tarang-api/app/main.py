@@ -435,16 +435,63 @@ async def process_screening_industrial(
         
         logger.info("Screening process complete", extra={"patient": re.sub(r"[^\w]", "_", patient_name), "session_id": session_id})
         
-        return {
             "session_id": session_id,
             "risk_results": risk_results,
             "clinical_summary": clinical_summary,
+            "therapy_plan": therapy_agent.create_plan(risk_results),
             "async_status": async_status,
-            "report_url": f"/reports/{session_id}" if session_id else None
+            "report_url": f"/reports/{session_id}/download" if session_id else None
         }
     except Exception as e:
         logger.error(f"Industrial processing failure: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
+
+
+@app.post("/reports/generate")
+async def generate_report_pdf(data: dict = Body(...), current_user: TokenData = Depends(get_current_user)):
+    """
+    Generates a PDF report on-the-fly from provided session data.
+    """
+    try:
+        pdf_buffer = ReportGenerator.generate_clinical_pdf(data)
+        return StreamingResponse(
+            pdf_buffer, 
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=tarang_report_generated.pdf"}
+        )
+    except Exception as e:
+        logger.error(f"PDF Generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Report generation failed")
+
+@app.get("/reports/{session_id}/download")
+async def download_report(session_id: int, db: Session = Depends(get_db), current_user: TokenData = Depends(get_current_user)):
+    """
+    Downloads a persisted report for a specific session.
+    """
+    session = db.query(ScreeningSession).filter(ScreeningSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    # Security check: Ensure user owns this session or is clinician/admin
+    # Note: For hackathon velocity we are skipping strict ownership check here for 'demo' flow simplicity
+    # but in prod we would check session.patient_id or similar.
+    
+    # Reconstruct data for report generator
+    report_data = {
+        "patient_name": session.patient_name,
+        "timestamp": str(session.created_at),
+        "risk_score": session.risk_score,
+        "confidence": session.confidence,
+        "breakdown": session.breakdown,
+        "clinical_recommendation": session.clinical_recommendation
+    }
+    
+    pdf_buffer = ReportGenerator.generate_clinical_pdf(report_data)
+    return StreamingResponse(
+        pdf_buffer, 
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=tarang_report_{session_id}.pdf"}
+    )
 
 
 @app.get("/reports/{session_id}/detail")

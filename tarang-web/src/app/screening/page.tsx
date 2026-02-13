@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useMediaPipe } from '@/hooks/use-mediapipe'
-import { ArrowLeft, ArrowRight, CheckCircle2, Video, FileText, Brain, Loader2, Info, Eye, Zap } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, Video, FileText, Brain, Loader2, Info, Eye, Zap, Download, Play, Calendar } from 'lucide-react'
 import { cn, API_URL } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth, withRoleProtection } from '@/context/AuthContext'
@@ -173,6 +173,42 @@ function ScreeningPage() {
     }
 
     const handleBack = () => setStep(s => s - 1)
+
+    const handleDownloadPDF = async () => {
+        try {
+            // Use current results to generate PDF
+            const body = {
+                patient_name: user?.full_name || "Patient",
+                timestamp: new Date().toISOString(),
+                risk_score: results?.risk_results?.risk_score,
+                confidence: results?.risk_results?.confidence,
+                breakdown: results?.risk_results?.breakdown,
+                clinical_recommendation: results?.clinical_summary?.clinical_recommendation
+            }
+
+            const response = await fetch(`${API_URL}/reports/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(body)
+            })
+
+            if (response.ok) {
+                const blob = await response.blob()
+                const url = window.URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `tarang_clinical_report_${new Date().getTime()}.pdf`
+                document.body.appendChild(a)
+                a.click()
+                a.remove()
+            }
+        } catch (error) {
+            console.error("PDF generation failed:", error)
+        }
+    }
 
     return (
         <div className="min-h-screen pt-32 px-8 md:px-16 lg:px-24 pb-32 max-w-7xl mx-auto relative z-10">
@@ -369,8 +405,64 @@ function ScreeningPage() {
                                         </div>
                                     </div>
 
+                                    {/* Therapy Plan / Intervention Section */}
+                                    {results?.therapy_plan && (
+                                        <div className="mb-16">
+                                            <div className="flex items-center gap-4 mb-8">
+                                                <div className="w-12 h-12 bg-[#D4AF37] flex items-center justify-center text-[#0B3D33]">
+                                                    <Brain className="w-6 h-6" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">Adaptive_Intervention</p>
+                                                    <h3 className="text-3xl font-serif font-black text-[#0B3D33]">Personalized Therapy Plan</h3>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white border-2 border-[#0B3D33]/10 p-8">
+                                                <div className="flex justify-between items-start mb-6 border-b border-[#0B3D33]/10 pb-6">
+                                                    <div>
+                                                        <h4 className="font-bold text-lg text-[#0B3D33]">{results.therapy_plan.focus_area}</h4>
+                                                        <p className="text-sm opacity-60">Primary Clinical Objective</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="px-3 py-1 bg-[#0B3D33] text-[#D4AF37] text-[10px] font-black uppercase tracking-widest">
+                                                            Review: {results.therapy_plan.next_review}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    {results.therapy_plan.suggested_activities?.map((activity: any, idx: number) => (
+                                                        <div key={idx} className="bg-[#FDFCF8] p-6 border border-[#0B3D33]/5 hover:border-[#D4AF37] transition-all group">
+                                                            <div className="flex justify-between mb-4">
+                                                                <span className="w-8 h-8 rounded-full bg-[#0B3D33]/5 flex items-center justify-center font-black text-xs group-hover:bg-[#D4AF37] group-hover:text-[#0B3D33] transition-colors">
+                                                                    {idx + 1}
+                                                                </span>
+                                                                <span className="text-[10px] font-black uppercase tracking-widest opacity-40 flex items-center gap-1">
+                                                                    <Calendar className="w-3 h-3" /> {activity.duration}
+                                                                </span>
+                                                            </div>
+                                                            <h5 className="font-bold text-[#0B3D33] mb-2">{activity.title}</h5>
+                                                            <p className="text-sm opacity-70 leading-relaxed">{activity.goal}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                <div className="mt-8 pt-6 border-t border-[#0B3D33]/10 flex justify-end">
+                                                    <button className="text-xs font-black uppercase tracking-widest text-[#D4AF37] hover:underline flex items-center gap-2">
+                                                        View Full Protocol <ArrowRight className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="flex flex-wrap gap-6 pt-10 border-t border-[#0B3D33]/10">
-                                        <button className="bg-[#0B3D33] text-[#D4AF37] px-10 py-5 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all">
+                                        <button
+                                            onClick={handleDownloadPDF}
+                                            className="bg-[#0B3D33] text-[#D4AF37] px-10 py-5 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all flex items-center gap-3"
+                                        >
+                                            <Download className="w-5 h-5" />
                                             Generate Clinical PDF
                                         </button>
                                         <Link href="/dashboard" className="px-10 py-5 border-2 border-[#0B3D33] font-black uppercase tracking-widest hover:bg-[#0B3D33] hover:text-[#FDFCF8] transition-all">
