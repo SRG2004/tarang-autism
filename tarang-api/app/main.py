@@ -131,6 +131,38 @@ def health_check():
 
 # --- AUTH & TENANCY ROUTES ---
 
+@app.post("/auth/demo/{role}", response_model=Token)
+async def login_demo(role: str, db: Session = Depends(get_db)):
+    """
+    PROTOTYPE ONLY: Generates a valid token for a demo user without password check.
+    Bypasses bcrypt entirely.
+    """
+    role = role.lower()
+    email = f"demo_{role}@tarang.ai"
+    
+    # Find or create demo user
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = User(
+            email=email,
+            hashed_password="demo_hash_bypass", # Dummy hash
+            full_name=f"Demo {role.capitalize()}",
+            role=role,
+            org_id=1 if role == "clinician" else None,
+            profile_metadata={"demo": True}
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    # Generate token
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email, "role": user.role, "org_id": user.org_id},
+        expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
 @app.post("/auth/register", response_model=UserOut)
 async def register(user_in: UserCreate, db: Session = Depends(get_db)):
     # Check if user exists
