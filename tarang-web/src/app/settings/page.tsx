@@ -5,9 +5,10 @@ import { Settings, Bell, Globe, Shield, Moon, Volume2, Save, CheckCircle } from 
 import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useI18n } from '@/hooks/use-i18n'
+import { API_URL } from '@/lib/utils'
 
 export default function SettingsPage() {
-    const { isAuthenticated, isLoading } = useAuth()
+    const { isAuthenticated, isLoading, token } = useAuth()
     const { language, setLanguage } = useI18n()
     const router = useRouter()
     const [saved, setSaved] = useState(false)
@@ -54,9 +55,23 @@ export default function SettingsPage() {
         }))
     }
 
-    const handleSave = () => {
-        setSaved(true)
-        setTimeout(() => setSaved(false), 3000)
+    const handleSave = async () => {
+        try {
+            const response = await fetch(`${API_URL}/users/settings`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(settings)
+            })
+            if (response.ok) {
+                setSaved(true)
+                setTimeout(() => setSaved(false), 3000)
+            }
+        } catch (err) {
+            console.error('Failed to save settings:', err)
+        }
     }
 
     const Toggle = ({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) => (
@@ -88,8 +103,8 @@ export default function SettingsPage() {
                     <button
                         onClick={handleSave}
                         className={`flex items-center gap-2 px-6 py-3 font-black uppercase tracking-widest text-sm transition-all ${saved
-                                ? 'bg-green-500 text-white'
-                                : 'bg-[#0B3D33] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#0B3D33]'
+                            ? 'bg-green-500 text-white'
+                            : 'bg-[#0B3D33] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#0B3D33]'
                             }`}
                     >
                         {saved ? <><CheckCircle className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Changes</>}
@@ -106,8 +121,8 @@ export default function SettingsPage() {
                         <button
                             onClick={() => setLanguage('en')}
                             className={`px-6 py-3 font-black uppercase tracking-widest transition-all ${language === 'en'
-                                    ? 'bg-[#0B3D33] text-[#D4AF37]'
-                                    : 'border-2 border-[#0B3D33]/20 text-[#0B3D33]/60'
+                                ? 'bg-[#0B3D33] text-[#D4AF37]'
+                                : 'border-2 border-[#0B3D33]/20 text-[#0B3D33]/60'
                                 }`}
                         >
                             English
@@ -115,8 +130,8 @@ export default function SettingsPage() {
                         <button
                             onClick={() => setLanguage('hi')}
                             className={`px-6 py-3 font-black uppercase tracking-widest transition-all ${language === 'hi'
-                                    ? 'bg-[#0B3D33] text-[#D4AF37]'
-                                    : 'border-2 border-[#0B3D33]/20 text-[#0B3D33]/60'
+                                ? 'bg-[#0B3D33] text-[#D4AF37]'
+                                : 'border-2 border-[#0B3D33]/20 text-[#0B3D33]/60'
                                 }`}
                         >
                             हिन्दी

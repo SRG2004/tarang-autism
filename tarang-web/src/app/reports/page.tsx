@@ -8,12 +8,12 @@ import { useAuth } from '@/context/AuthContext'
 
 export default function ReportsPage() {
     const router = useRouter()
-    const { token } = useAuth()
+    const { token, user } = useAuth()
     const [downloading, setDownloading] = useState<number | null>(null)
     const reports = [
-        { id: 1, sid: '#TR-8821', date: 'Jan 25, 2026', type: 'Clinical Fusion', patient: 'Arvid Smith', risk: '72.4%', status: 'Available' },
-        { id: 2, sid: '#TR-8702', date: 'Jan 10, 2026', type: 'Gaze Baseline', patient: 'Arvid Smith', risk: '65.1%', status: 'Archived' },
-        { id: 3, sid: '#TR-8591', date: 'Dec 15, 2025', type: 'Initial Intake', patient: 'Arvid Smith', risk: '58.0%', status: 'Archived' },
+        { id: 1, sid: '#TR-8821', date: 'Jan 25, 2026', type: 'Clinical Fusion', patient: user?.full_name || 'Patient', risk: '72.4%', status: 'Available' },
+        { id: 2, sid: '#TR-8702', date: 'Jan 10, 2026', type: 'Gaze Baseline', patient: user?.full_name || 'Patient', risk: '65.1%', status: 'Archived' },
+        { id: 3, sid: '#TR-8591', date: 'Dec 15, 2025', type: 'Initial Intake', patient: user?.full_name || 'Patient', risk: '58.0%', status: 'Archived' },
     ]
 
     const handleDownload = async (id: number) => {

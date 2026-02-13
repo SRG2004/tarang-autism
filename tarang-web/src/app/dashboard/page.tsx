@@ -17,7 +17,7 @@ const data = [
 
 export default function Dashboard() {
     const [scheduling, setScheduling] = useState<string | null>(null)
-    const { token } = useAuth()
+    const { token, user } = useAuth()
 
     const handleSchedule = async (title: string) => {
         setScheduling(title)
@@ -56,7 +56,7 @@ export default function Dashboard() {
                         <span className="px-3 py-1 bg-[#D4AF37]/20 text-[#D4AF37] font-mono text-[10px] uppercase font-black tracking-widest">Active_Care_Continuum</span>
                         <span className="text-[10px] font-mono uppercase tracking-widest opacity-40">Profile_ID: #TAR_9001</span>
                     </div>
-                    <h1 className="text-7xl font-serif font-black tracking-tighter uppercase leading-none">Arvid Smith</h1>
+                    <h1 className="text-7xl font-serif font-black tracking-tighter uppercase leading-none">{user?.full_name || "Patient"}</h1>
                     <p className="text-xl font-light text-[#0B3D33]/60 mt-4 max-w-xl">Early Behavioral Intervention | Stage 2 Recovery</p>
                 </div>
                 <div className="flex gap-4">

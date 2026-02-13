@@ -7,6 +7,7 @@ import { cn, API_URL } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth, withRoleProtection } from '@/context/AuthContext'
 import RealTimeMetrics, { type DetectedMetrics } from '@/components/RealTimeMetrics'
+import AQ10Questionnaire from '@/components/AQ10Questionnaire'
 
 function ScreeningPage() {
     const [step, setStep] = useState(0)
@@ -14,7 +15,8 @@ function ScreeningPage() {
     const [results, setResults] = useState<any>(null)
     const [answers, setAnswers] = useState<Record<string, string>>({})
     const [visionMetrics, setVisionMetrics] = useState<DetectedMetrics | null>(null)
-    const { token } = useAuth()
+    const [questionnaireResponses, setQuestionnaireResponses] = useState<number[]>(Array(10).fill(-1))
+    const { token, user } = useAuth()
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const streamRef = useRef<MediaStream | null>(null)
@@ -141,8 +143,8 @@ function ScreeningPage() {
                     },
                     body: JSON.stringify({
                         video_metrics: metricsToSend,
-                        questionnaire_score: 12,
-                        patient_name: "Arvid Smith"
+                        questionnaire_score: questionnaireResponses.reduce((sum, val) => sum + (val === 1 ? 1 : 0), 0),
+                        patient_name: user?.full_name || "Patient"
                     })
                 })
 
@@ -243,57 +245,15 @@ function ScreeningPage() {
 
                             {step === 1 && (
                                 <div>
-                                    <h2 className="text-6xl font-serif font-black tracking-tighter mb-8 leading-none">Scoping <br /> Behavior</h2>
-                                    <div className="space-y-12 mb-16">
-                                        <div className="space-y-4">
-                                            <h4 className="text-xs font-black uppercase tracking-widest text-[#D4AF37]">Social_Engagement</h4>
-                                            <p className="text-2xl font-serif font-bold">Does your child show objects to you by holding them up?</p>
-                                            <div className="flex flex-wrap gap-4">
-                                                {["Rarely", "Occasionally", "Frequently", "Always"].map(opt => (
-                                                    <button
-                                                        type="button"
-                                                        key={opt}
-                                                        onClick={() => setAnswers(prev => ({ ...prev, social: opt }))}
-                                                        className={cn(
-                                                            "px-8 py-3 border-2 font-black uppercase text-[10px] tracking-widest transition-all cursor-pointer relative z-20",
-                                                            answers.social === opt
-                                                                ? "bg-[#D4AF37] border-[#D4AF37] text-white"
-                                                                : "border-[#0B3D33] text-[#0B3D33] hover:bg-[#D4AF37] hover:border-[#D4AF37] hover:text-white"
-                                                        )}
-                                                    >
-                                                        {opt}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <h4 className="text-xs font-black uppercase tracking-widest text-[#D4AF37]">Motor_Repetition</h4>
-                                            <p className="text-2xl font-serif font-bold">Have you noticed unusual repetitive body movements?</p>
-                                            <div className="flex flex-wrap gap-4">
-                                                {["No", "Yes, subtle", "Yes, frequent"].map(opt => (
-                                                    <button
-                                                        type="button"
-                                                        key={opt}
-                                                        onClick={() => setAnswers(prev => ({ ...prev, motor: opt }))}
-                                                        className={cn(
-                                                            "px-8 py-3 border-2 font-black uppercase text-[10px] tracking-widest transition-all cursor-pointer relative z-20",
-                                                            answers.motor === opt
-                                                                ? "bg-[#D4AF37] border-[#D4AF37] text-white"
-                                                                : "border-[#0B3D33] text-[#0B3D33] hover:bg-[#D4AF37] hover:border-[#D4AF37] hover:text-white"
-                                                        )}
-                                                    >
-                                                        {opt}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-4">
-                                        <button type="button" onClick={handleBack} className="px-10 py-5 border-2 border-[#0B3D33] font-black uppercase tracking-widest hover:bg-[#0B3D33] hover:text-white transition-all cursor-pointer relative z-20">Back</button>
-                                        <button type="button" onClick={handleNext} className="bg-[#0B3D33] text-[#D4AF37] px-10 py-5 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all flex items-center gap-3 cursor-pointer relative z-20">
-                                            Continue to Vision <ArrowRight className="w-5 h-5" />
-                                        </button>
-                                    </div>
+                                    <AQ10Questionnaire
+                                        responses={questionnaireResponses}
+                                        onResponseChange={(index: number, value: number) => {
+                                            const newResponses = [...questionnaireResponses]
+                                            newResponses[index] = value
+                                            setQuestionnaireResponses(newResponses)
+                                        }}
+                                        onComplete={() => setStep(2)}
+                                    />
                                 </div>
                             )}
 

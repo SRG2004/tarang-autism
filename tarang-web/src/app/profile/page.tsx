@@ -4,9 +4,10 @@ import { motion } from 'framer-motion'
 import { User, Mail, Phone, MapPin, Calendar, Edit2, Save, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
+import { API_URL } from '@/lib/utils'
 
 export default function ProfilePage() {
-    const { user, isAuthenticated, isLoading } = useAuth()
+    const { user, isAuthenticated, isLoading, token } = useAuth()
     const router = useRouter()
     const [isEditing, setIsEditing] = useState(false)
     const [formData, setFormData] = useState({
@@ -161,7 +162,23 @@ export default function ProfilePage() {
                     {isEditing && (
                         <div className="mt-10 pt-8 border-t border-[#0B3D33]/10">
                             <button
-                                onClick={() => setIsEditing(false)}
+                                onClick={async () => {
+                                    try {
+                                        const response = await fetch(`${API_URL}/users/profile`, {
+                                            method: 'PUT',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'Authorization': `Bearer ${token}`
+                                            },
+                                            body: JSON.stringify(formData)
+                                        })
+                                        if (response.ok) {
+                                            setIsEditing(false)
+                                        }
+                                    } catch (err) {
+                                        console.error('Failed to save profile:', err)
+                                    }
+                                }}
                                 className="flex items-center gap-2 bg-[#D4AF37] text-[#0B3D33] px-8 py-4 font-black uppercase tracking-widest hover:bg-[#0B3D33] hover:text-[#D4AF37] transition-all"
                             >
                                 <Save className="w-4 h-4" /> Save Changes

@@ -177,6 +177,145 @@ async def create_organization(org_in: OrganizationCreate, db: Session = Depends(
     db.refresh(db_org)
     return db_org
 
+# User Settings & Profile Endpoints
+@app.put("/users/settings")
+async def update_settings(
+    settings: dict,
+    current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.email == current_user.sub).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not user.profile_metadata:
+        user.profile_metadata = {}
+    user.profile_metadata["settings"] = settings
+    db.commit()
+    return {"status": "success", "message": "Settings updated"}
+
+@app.put("/users/profile")
+async def update_profile(
+    profile: dict,
+    current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.email == current_user.sub).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update profile fields
+    if "phone" in profile:
+        if not user.profile_metadata:
+            user.profile_metadata = {}
+        user.profile_metadata["phone"] = profile["phone"]
+    if "address" in profile:
+        if not user.profile_metadata:
+            user.profile_metadata = {}
+        user.profile_metadata["address"] = profile["address"]
+    if "childName" in profile:
+        if not user.profile_metadata:
+            user.profile_metadata = {}
+        user.profile_metadata["childName"] = profile["childName"]
+    if "childAge" in profile:
+        if not user.profile_metadata:
+            user.profile_metadata = {}
+        user.profile_metadata["childAge"] = profile["childAge"]
+    
+    db.commit()
+    return {"status": "success", "message": "Profile updated"}
+
+@app.get("/users/dashboard")
+async def get_dashboard_data(
+    current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Get user's screening sessions
+    sessions = db.query(ScreeningSession).filter(
+        ScreeningSession.patient_name == current_user.sub
+    ).order_by(ScreeningSession.created_at.desc()).limit(10).all()
+    
+    # Calculate stats
+    total_screenings = len(sessions)
+    latest_risk = sessions[0].risk_score if sessions else 0
+    
+    # Generate chart data from sessions
+    chart_data = []
+    for i, session in enumerate(reversed(sessions[-6:])):
+        chart_data.append({
+            "name": f"W{i+1}",
+            "score": int(session.risk_score) if session.risk_score else 0
+        })
+    
+    return {
+        "total_screenings": total_screenings,
+        "latest_risk": latest_risk,
+        "chart_data": chart_data,
+        "stability_index": latest_risk if latest_risk else 0
+    }
+
+@app.get("/reports")
+async def get_reports(
+    current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Get user's screening sessions as reports
+    sessions = db.query(ScreeningSession).filter(
+        ScreeningSession.patient_name == current_user.sub
+    ).order_by(ScreeningSession.created_at.desc()).all()
+    
+    reports = []
+    for session in sessions:
+        reports.append({
+            "id": session.id,
+            "sid": f"#TR-{session.id + 8800}",
+            "date": session.created_at.strftime("%b %d, %Y"),
+            "type": "Clinical Fusion" if session.risk_score > 60 else "Gaze Baseline",
+            "patient": session.patient_name,
+            "risk": f"{session.risk_score:.1f}%" if session.risk_score else "N/A",
+            "status": "Available"
+        })
+    
+    return reports
+
+@app.get("/clinical/patients")
+async def get_clinical_patients(
+    current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Only for doctors/clinicians
+    if current_user.role not in ["doctor", "clinician", "admin"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get patients from same organization
+    patients = db.query(Patient).filter(
+        Patient.org_id == current_user.org_id
+    ).limit(20).all()
+    
+    result = []
+    for patient in patients:
+        # Get latest session for each patient
+        latest_session = db.query(ScreeningSession).filter(
+            ScreeningSession.patient_id == patient.id
+        ).order_by(ScreeningSession.created_at.desc()).first()
+        
+        risk_level = "Low"
+        if latest_session and latest_session.risk_score:
+            if latest_session.risk_score > 70:
+                risk_level = "High"
+            elif latest_session.risk_score > 50:
+                risk_level = "Medium"
+        
+        result.append({
+            "id": patient.external_id,
+            "name": patient.name,
+            "risk": risk_level,
+            "stability": f"{latest_session.risk_score:.1f}%" if latest_session and latest_session.risk_score else "N/A",
+            "nextDrill": "11:30"  # Placeholder
+        })
+    
+    return result
+
 @app.post("/screening/process")
 @app.post("/screening/process-industrial")
 @limiter.limit("5/minute")

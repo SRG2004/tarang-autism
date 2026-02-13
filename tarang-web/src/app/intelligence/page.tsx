@@ -9,13 +9,13 @@ import { useAuth } from '@/context/AuthContext'
 export default function IntelligenceDashboard() {
     const [prediction, setPrediction] = useState<any>(null)
     const [centers, setCenters] = useState<any[]>([])
-    const { token } = useAuth()
+    const { token, user } = useAuth()
 
     useEffect(() => {
         if (!token) return
         const headers = { 'Authorization': `Bearer ${token}` }
 
-        fetch(`${API_URL}/analytics/prediction/Arvid Smith`, { headers })
+        fetch(`${API_URL}/analytics/prediction/${encodeURIComponent(user?.full_name || 'Patient')}`, { headers })
             .then(res => res.ok ? res.json() : null)
             .then(data => { if (data) setPrediction(data) })
             .catch(err => console.warn('Prediction fetch failed:', err))

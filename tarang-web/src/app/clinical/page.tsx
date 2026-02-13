@@ -1,7 +1,7 @@
 "use client"
 import { motion } from 'framer-motion'
 import { Users, FileText, Activity, Search, Filter, ArrowRight, UserPlus } from 'lucide-react'
-import { withRoleProtection } from '@/context/AuthContext'
+import { withRoleProtection, useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 
 const PatientCard = ({ patient }: any) => (
@@ -39,8 +39,9 @@ const PatientCard = ({ patient }: any) => (
 )
 
 function ClinicalDashboard() {
+    const { user } = useAuth()
     const patients = [
-        { id: "TAR_9001", name: "Arvid Smith", risk: "Medium", stability: "72.4%", nextDrill: "11:30" },
+        { id: "TAR_9001", name: user?.full_name || "Patient", risk: "Medium", stability: "72.4%", nextDrill: "11:30" },
         { id: "TAR_9005", name: "Elara Vance", risk: "High", stability: "45.1%", nextDrill: "14:00" },
         { id: "TAR_9012", name: "Leo Chen", risk: "Low", stability: "89.2%", nextDrill: "Done" },
         { id: "TAR_9022", name: "Maya Patel", risk: "Medium", stability: "68.9%", nextDrill: "16:30" },
