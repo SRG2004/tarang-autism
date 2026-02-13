@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     
     # Redis
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    
+    # Demo Mode (gates synthetic fallback data)
+    DEMO_MODE: bool = os.getenv("DEMO_MODE", "false").lower() == "true"
 
     class Config:
         case_sensitive = True

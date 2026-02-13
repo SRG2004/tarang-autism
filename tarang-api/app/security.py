@@ -33,7 +33,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
     credentials_exception = HTTPException(
@@ -48,7 +48,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
         org_id: int = payload.get("org_id")
         if username is None:
             raise credentials_exception
-        token_data = TokenData(username=username, role=role, org_id=org_id)
+        token_data = TokenData(username=username, sub=username, role=role, org_id=org_id)
     except JWTError:
         raise credentials_exception
     return token_data
@@ -65,6 +65,6 @@ def decode_websocket_token(token: str) -> Optional[TokenData]:
         org_id: int = payload.get("org_id")
         if username is None:
             return None
-        return TokenData(username=username, role=role, org_id=org_id)
+        return TokenData(username=username, sub=username, role=role, org_id=org_id)
     except JWTError:
         return None

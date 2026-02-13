@@ -1,23 +1,36 @@
 "use client"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Activity, Calendar, Clock, User, ArrowUpRight, Plus, Download, ChevronRight, AlertCircle } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { cn, API_URL } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 
-const data = [
-    { name: 'W1', score: 38 },
-    { name: 'W2', score: 42 },
-    { name: 'W3', score: 35 },
-    { name: 'W4', score: 55 },
-    { name: 'W5', score: 62 },
-    { name: 'W6', score: 71 },
-]
-
 export default function Dashboard() {
     const [scheduling, setScheduling] = useState<string | null>(null)
     const { token, user } = useAuth()
+    const [dashboardData, setDashboardData] = useState<any>(null)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        if (!token) return
+        const headers = { 'Authorization': `Bearer ${token}` }
+        fetch(`${API_URL}/users/dashboard`, { headers })
+            .then(res => res.ok ? res.json() : null)
+            .then(data => { if (data) setDashboardData(data) })
+            .catch(err => console.warn('Dashboard fetch failed:', err))
+            .finally(() => setLoading(false))
+    }, [token])
+
+    const chartData = dashboardData?.chart_data || []
+    const stabilityIndex = dashboardData?.latest_risk ? `${Number(dashboardData.latest_risk).toFixed(1)}%` : '—'
+    const totalScreenings = dashboardData?.total_screenings ?? 0
+
+    const stats = [
+        { label: "Stability Index", val: stabilityIndex, trend: totalScreenings > 1 ? "Tracking" : "—", color: "#D4AF37" },
+        { label: "Total Screenings", val: totalScreenings.toString(), trend: "Cumulative", color: "#0B3D33" },
+        { label: "Status", val: totalScreenings > 0 ? "Active" : "New", trend: totalScreenings > 0 ? "Monitored" : "—", color: "#0B3D33" },
+    ]
 
     const handleSchedule = async (title: string) => {
         setScheduling(title)
@@ -72,11 +85,7 @@ export default function Dashboard() {
                 <div className="xl:col-span-8 space-y-10">
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-0 border-2 border-[#0B3D33]">
-                        {[
-                            { label: "Stability Index", val: "72.4%", trend: "+2.1%", color: "#D4AF37" },
-                            { label: "Gaze Velocity", val: "Lo-Fi", trend: "Steady", color: "#0B3D33" },
-                            { label: "Engagement", val: "Strong", trend: "Rising", color: "#0B3D33" },
-                        ].map((stat, i) => (
+                        {stats.map((stat, i) => (
                             <div key={i} className={cn(
                                 "p-10 relative overflow-hidden group border-[#0B3D33]",
                                 i !== 2 ? "sm:border-r-2" : ""
@@ -104,35 +113,41 @@ export default function Dashboard() {
                                 <Activity className="w-6 h-6 text-[#D4AF37]" /> Interaction Variance Analysis
                             </h3>
                             <div className="flex gap-4 text-[10px] font-black uppercase tracking-widest opacity-40">
-                                <span className="flex items-center gap-2"><div className="w-2 h-2 bg-[#D4AF37]" /> Observation</span>
-                                <span className="flex items-center gap-2"><div className="w-2 h-2 border border-[#0B3D33]" /> Target</span>
+                                <span className="flex items-center gap-2"><span className="w-2 h-2 bg-[#D4AF37] inline-block" /> Observation</span>
+                                <span className="flex items-center gap-2"><span className="w-2 h-2 border border-[#0B3D33] inline-block" /> Target</span>
                             </div>
                         </div>
 
                         <div className="h-[350px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={data}>
-                                    <defs>
-                                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.1} />
-                                            <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <XAxis
-                                        dataKey="name"
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fontSize: 11, fontWeight: 900, fill: '#0B3D33', opacity: 0.4 }}
-                                        dy={20}
-                                    />
-                                    <YAxis hide domain={[0, 100]} />
-                                    <Tooltip
-                                        cursor={{ stroke: '#0B3D33', strokeWidth: 1, strokeDasharray: '4 4' }}
-                                        contentStyle={{ borderRadius: 0, border: '2px solid #0B3D33', backgroundColor: '#FDFCF8', fontWeight: 900, fontSize: 12 }}
-                                    />
-                                    <Area type="monotone" dataKey="score" stroke="#D4AF37" strokeWidth={5} fillOpacity={1} fill="url(#colorScore)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                            {chartData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={chartData}>
+                                        <defs>
+                                            <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.1} />
+                                                <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <XAxis
+                                            dataKey="name"
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{ fontSize: 11, fontWeight: 900, fill: '#0B3D33', opacity: 0.4 }}
+                                            dy={20}
+                                        />
+                                        <YAxis hide domain={[0, 100]} />
+                                        <Tooltip
+                                            cursor={{ stroke: '#0B3D33', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                            contentStyle={{ borderRadius: 0, border: '2px solid #0B3D33', backgroundColor: '#FDFCF8', fontWeight: 900, fontSize: 12 }}
+                                        />
+                                        <Area type="monotone" dataKey="score" stroke="#D4AF37" strokeWidth={5} fillOpacity={1} fill="url(#colorScore)" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-[#0B3D33]/30 font-black uppercase tracking-widest text-sm">
+                                    No screening data yet — complete your first screening to see trends
+                                </div>
+                            )}
                         </div>
                     </motion.div>
 
@@ -212,7 +227,7 @@ export default function Dashboard() {
                                 { title: "Sensory Processing", duration: "40m", diff: "L3" },
                                 { title: "Visual Narrative", duration: "25m", diff: "L1" },
                             ].map(act => (
-                                <div key={act.title} className="p-6 border-2 border-[#FDFCF8] hover:border-[#0B3D33] transition-all group group cursor-pointer bg-[#FDFCF8]">
+                                <div key={act.title} className="p-6 border-2 border-[#FDFCF8] hover:border-[#0B3D33] transition-all group cursor-pointer bg-[#FDFCF8]">
                                     <div className="flex justify-between items-start mb-4">
                                         <span className="text-[10px] font-black font-mono uppercase tracking-widest text-[#D4AF37]">{act.diff}_Protocol</span>
                                         <span className="text-[10px] font-black opacity-30">{act.duration}</span>

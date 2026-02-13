@@ -123,4 +123,11 @@ class ScreeningSession(Base):
     
     patient = relationship("Patient", back_populates="sessions")
 
-Base.metadata.create_all(bind=engine)
+
+def init_db():
+    """Explicitly create tables. Call from startup, not import-time."""
+    Base.metadata.create_all(bind=engine)
+
+# Auto-init for development convenience (SQLite only)
+if DATABASE_URL.startswith("sqlite"):
+    init_db()

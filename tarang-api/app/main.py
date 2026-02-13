@@ -627,7 +627,7 @@ async def download_report(
     patient = db.query(Patient).filter(Patient.id == session.patient_id).first()
     if patient and patient.org_id != current_user.org_id:
         logger.warning("Unauthorized access attempt to report", extra={
-            "user": current_user.username,
+            "user": current_user.sub,
             "session": session_id
         })
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -675,8 +675,10 @@ async def get_patient_prediction(
     scores = [s.risk_score for s in sessions]
     
     if not scores:
-        # Simulate historical data for demo if DB is empty
-        scores = [38.0, 42.5, 35.0, 55.2]
+        if settings.DEMO_MODE:
+            scores = [38.0, 42.5, 35.0, 55.2]
+        else:
+            return {"patient": patient_name, "historical_count": 0, "prediction": None, "clinical_insight": None, "history": []}
         
     prediction = outcome_agent.predict_trajectory(scores)
     alert = outcome_agent.generate_intervention_alert(prediction)
@@ -696,10 +698,12 @@ async def get_centers(
 ):
     centers = db.query(ClinicCenter).all()
     if not centers:
-        return [
-            {"id": 1, "name": "Tarang Delhi Center", "location": "New Delhi", "patients": 142},
-            {"id": 2, "name": "Tarang Mumbai Hub", "location": "Mumbai", "patients": 89}
-        ]
+        if settings.DEMO_MODE:
+            return [
+                {"id": 1, "name": "Tarang Delhi Center", "location": "New Delhi", "patients": 142},
+                {"id": 2, "name": "Tarang Mumbai Hub", "location": "Mumbai", "patients": 89}
+            ]
+        return []
     return centers
 
 @app.get("/community")
@@ -713,10 +717,12 @@ async def get_community_posts(
         (CommunityPost.org_id == current_user.org_id) | (CommunityPost.org_id == None)
     ).order_by(CommunityPost.created_at.desc()).all()
     if not posts:
-        return [
-            {"id": 1, "author": "Sarah M.", "content": "Just finished our first 'Gaze Baseline' screening. The data visualization really helped me explain Arvid's behavior to his teacher.", "is_safe": 1},
-            {"id": 2, "author": "David K.", "content": "Does anyone have tips for sensory-friendly routine apps that sync with Tarang?", "is_safe": 1}
-        ]
+        if settings.DEMO_MODE:
+            return [
+                {"id": 1, "author": "Sarah M.", "content": "Just finished our first 'Gaze Baseline' screening. The data visualization really helped me explain Arvid's behavior to his teacher.", "is_safe": 1},
+                {"id": 2, "author": "David K.", "content": "Does anyone have tips for sensory-friendly routine apps that sync with Tarang?", "is_safe": 1}
+            ]
+        return []
     return posts
 
 @app.post("/community/post")

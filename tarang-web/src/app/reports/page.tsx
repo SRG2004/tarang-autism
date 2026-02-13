@@ -1,5 +1,5 @@
 "use client"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { FileText, Download, Filter, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -10,11 +10,17 @@ export default function ReportsPage() {
     const router = useRouter()
     const { token, user } = useAuth()
     const [downloading, setDownloading] = useState<number | null>(null)
-    const reports = [
-        { id: 1, sid: '#TR-8821', date: 'Jan 25, 2026', type: 'Clinical Fusion', patient: user?.full_name || 'Patient', risk: '72.4%', status: 'Available' },
-        { id: 2, sid: '#TR-8702', date: 'Jan 10, 2026', type: 'Gaze Baseline', patient: user?.full_name || 'Patient', risk: '65.1%', status: 'Archived' },
-        { id: 3, sid: '#TR-8591', date: 'Dec 15, 2025', type: 'Initial Intake', patient: user?.full_name || 'Patient', risk: '58.0%', status: 'Archived' },
-    ]
+    const [reports, setReports] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        if (!token) return
+        fetch(`${API_URL}/reports`, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setReports(Array.isArray(data) ? data : []))
+            .catch(err => console.warn('Reports fetch failed:', err))
+            .finally(() => setLoading(false))
+    }, [token])
 
     const handleDownload = async (id: number) => {
         setDownloading(id)
