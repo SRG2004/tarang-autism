@@ -69,6 +69,17 @@ app = FastAPI(
     description="Enterprise-grade Autism Care Continuum API"
 )
 
+# CORS must be added FIRST so it wraps all responses (including error responses)
+_origins = [o.strip() for o in settings.ALLOWED_ORIGINS if o.strip()] if isinstance(settings.ALLOWED_ORIGINS, list) else [settings.ALLOWED_ORIGINS]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_origins,
+    allow_credentials=True if _origins != ["*"] else False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
 # Rate Limiter Setup
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
@@ -82,15 +93,6 @@ async def limit_request_size(request: Request, call_next):
     if content_length and int(content_length) > MAX_REQUEST_SIZE:
         return Response(content="Payload too large", status_code=413)
     return await call_next(request)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True if settings.ALLOWED_ORIGINS != ["*"] else False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
 
 # Dependency
 def get_db():
