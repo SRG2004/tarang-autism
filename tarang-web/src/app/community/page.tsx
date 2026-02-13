@@ -10,7 +10,7 @@ function CommunityHub() {
     const [newPost, setNewPost] = useState('')
     const [chatQuery, setChatQuery] = useState('')
     const [aiSuggestions, setAiSuggestions] = useState<any[]>([])
-    const { token } = useAuth()
+    const { token, user } = useAuth()
 
     useEffect(() => {
         if (!token) return
@@ -29,21 +29,30 @@ function CommunityHub() {
     }, [token])
 
     const handlePost = async () => {
-        if (!newPost.trim()) return
-        const res = await fetch(`${API_URL}/community/post`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ author: 'James S.', content: newPost })
-        })
-        const data = await res.json()
-        if (data.moderation.safe) {
-            setPosts([{ author: 'James S.', content: newPost, created_at: new Date().toISOString() }, ...posts])
-            setNewPost('')
-        } else {
-            alert("Action Restricted: Your post contains terms that violate our pediatric safety policy.")
+        if (!newPost.trim() || !user) return
+        const authorName = user.full_name || 'Anonymous'
+
+        try {
+            const res = await fetch(`${API_URL}/community/post`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ author: authorName, content: newPost })
+            })
+
+            if (!res.ok) throw new Error('Post failed')
+
+            const data = await res.json()
+            if (data.moderation && data.moderation.safe) {
+                setPosts([{ author: authorName, content: newPost, created_at: new Date().toISOString() }, ...posts])
+                setNewPost('')
+            } else {
+                alert("Action Restricted: Your post contains terms that violate our pediatric safety policy.")
+            }
+        } catch (error) {
+            console.error('Failed to post:', error)
         }
     }
 
