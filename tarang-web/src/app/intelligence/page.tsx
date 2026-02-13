@@ -15,7 +15,7 @@ export default function IntelligenceDashboard() {
         if (!token) return
         const headers = { 'Authorization': `Bearer ${token}` }
 
-        fetch(`${API_URL}/analytics/prediction/${encodeURIComponent(user?.full_name || 'Patient')}`, { headers })
+        fetch(`${API_URL}/analytics/prediction/${encodeURIComponent(user?.email || 'Patient')}`, { headers })
             .then(res => res.ok ? res.json() : null)
             .then(data => { if (data) setPrediction(data) })
             .catch(err => console.warn('Prediction fetch failed:', err))

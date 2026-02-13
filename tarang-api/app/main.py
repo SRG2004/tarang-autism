@@ -412,7 +412,7 @@ async def process_screening_industrial(
         try:
             logger.info("Persistence attempt", extra={"patient": re.sub(r"[^\w]", "_", patient_name)})
             db_session = ScreeningSession(
-                patient_name=patient_name,
+                patient_name=current_user.sub,
                 risk_score=risk_results["risk_score"],
                 confidence=risk_results["confidence"],
                 dissonance_factor=risk_results.get("dissonance_factor"),

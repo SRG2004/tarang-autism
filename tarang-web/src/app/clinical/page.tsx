@@ -1,8 +1,9 @@
 "use client"
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Users, FileText, Activity, Search, Filter, ArrowRight, UserPlus } from 'lucide-react'
+import { Users, FileText, Activity, Search, Filter, ArrowRight, UserPlus, Loader2 } from 'lucide-react'
 import { withRoleProtection, useAuth } from '@/context/AuthContext'
-import { cn } from '@/lib/utils'
+import { cn, API_URL } from '@/lib/utils'
 
 const PatientCard = ({ patient }: any) => (
     <div className="p-8 border-2 border-[#0B3D33] bg-white group hover:bg-[#0B3D33] hover:text-[#FDFCF8] transition-all duration-500 cursor-pointer shadow-[10px_10px_0px_#D4AF37]">
@@ -39,13 +40,18 @@ const PatientCard = ({ patient }: any) => (
 )
 
 function ClinicalDashboard() {
-    const { user } = useAuth()
-    const patients = [
-        { id: "TAR_9001", name: user?.full_name || "Patient", risk: "Medium", stability: "72.4%", nextDrill: "11:30" },
-        { id: "TAR_9005", name: "Elara Vance", risk: "High", stability: "45.1%", nextDrill: "14:00" },
-        { id: "TAR_9012", name: "Leo Chen", risk: "Low", stability: "89.2%", nextDrill: "Done" },
-        { id: "TAR_9022", name: "Maya Patel", risk: "Medium", stability: "68.9%", nextDrill: "16:30" },
-    ]
+    const { token, user } = useAuth()
+    const [patients, setPatients] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        if (!token) return
+        fetch(`${API_URL}/clinical/patients`, { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setPatients(Array.isArray(data) ? data : []))
+            .catch(err => console.warn('Clinical patients fetch failed:', err))
+            .finally(() => setLoading(false))
+    }, [token])
 
     return (
         <div className="min-h-screen bg-[#FDFCF8] pt-32 px-8 md:px-16 lg:px-24 pb-20">
@@ -87,23 +93,33 @@ function ClinicalDashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
-                {patients.map(p => (
-                    <div key={p.id} onClick={() => window.location.href = '/clinical/intervention'} className="cursor-pointer">
-                        <PatientCard patient={p} />
+                {loading ? (
+                    <div className="col-span-full flex justify-center py-20">
+                        <Loader2 className="w-8 h-8 animate-spin text-[#D4AF37]" />
                     </div>
-                ))}
+                ) : patients.length === 0 ? (
+                    <div className="col-span-full text-center py-20 text-[#0B3D33]/30 font-black uppercase tracking-widest text-sm">
+                        No patients registered in your organization yet
+                    </div>
+                ) : (
+                    patients.map(p => (
+                        <div key={p.id} onClick={() => window.location.href = '/clinical/intervention'} className="cursor-pointer">
+                            <PatientCard patient={p} />
+                        </div>
+                    ))
+                )}
             </div>
 
             <div className="mt-20 p-12 border-2 border-dashed border-[#0B3D33]/20 text-center">
                 <p className="text-[10px] font-black uppercase tracking-[0.5em] opacity-40 mb-6">Industrial_Analytics_Preview</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
                     {[
-                        { label: "Total Managed", val: "128" },
-                        { label: "High Risk Flags", val: "12" },
-                        { label: "Intervention Win-Rate", val: "94%", link: true },
-                        { label: "Avg Session Time", val: "22m" },
+                        { label: "Total Managed", val: patients.length.toString() },
+                        { label: "High Risk Flags", val: patients.filter(p => p.risk === 'High').length.toString() },
+                        { label: "Medium Risk", val: patients.filter(p => p.risk === 'Medium').length.toString() },
+                        { label: "Low Risk", val: patients.filter(p => p.risk === 'Low').length.toString() },
                     ].map(stat => (
-                        <div key={stat.label} className={stat.link ? "cursor-pointer hover:text-[#D4AF37] transition-all" : ""}>
+                        <div key={stat.label}>
                             <p className="text-4xl font-serif font-black mb-1">{stat.val}</p>
                             <p className="text-[10px] font-black uppercase tracking-widest opacity-40">{stat.label}</p>
                         </div>

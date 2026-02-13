@@ -75,44 +75,54 @@ export default function ReportsPage() {
                     </div>
 
                     <div className="divide-y-2 divide-[#0B3D33]/10">
-                        {reports.map((report, idx) => (
-                            <motion.div
-                                key={idx}
-                                whileHover={{ backgroundColor: "#FDFCF8" }}
-                                onClick={() => router.push(`/reports/${report.id}`)}
-                                className="grid grid-cols-12 gap-4 p-8 items-center group cursor-pointer"
-                            >
-                                <div className="col-span-2 font-mono text-xs font-bold">{report.sid}</div>
-                                <div className="col-span-2 text-sm font-medium opacity-60">{report.date}</div>
-                                <div className="col-span-3">
-                                    <p className="font-bold text-[#0B3D33]">{report.type}</p>
-                                    <p className="text-[10px] opacity-40 uppercase font-black">Agentic_Synthesis_V1</p>
-                                </div>
-                                <div className="col-span-2 font-serif text-2xl font-black text-[#D4AF37]">{report.risk}</div>
-                                <div className="col-span-2">
-                                    <span className={cn(
-                                        "px-3 py-1 text-[9px] font-black uppercase tracking-widest",
-                                        report.status === 'Available' ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                                    )}>{report.status}</span>
-                                </div>
-                                <div className="col-span-1 flex justify-end gap-4">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            handleDownload(report.id)
-                                        }}
-                                        className="p-2 hover:bg-[#D4AF37]/10 transition-all rounded-full"
-                                    >
-                                        {downloading === report.id ? (
-                                            <div className="w-5 h-5 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
-                                        ) : (
-                                            <Download className="w-5 h-5 text-[#D4AF37]" />
-                                        )}
-                                    </button>
-                                    <ChevronRight className="w-5 h-5 opacity-20 group-hover:opacity-100 transition-opacity text-[#0B3D33]" />
-                                </div>
-                            </motion.div>
-                        ))}
+                        {loading ? (
+                            <div className="flex justify-center py-16">
+                                <div className="w-8 h-8 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        ) : reports.length === 0 ? (
+                            <div className="py-16 text-center text-[#0B3D33]/30 font-black uppercase tracking-widest text-sm">
+                                No reports yet — complete a screening to generate your first report
+                            </div>
+                        ) : (
+                            reports.map((report, idx) => (
+                                <motion.div
+                                    key={idx}
+                                    whileHover={{ backgroundColor: "#FDFCF8" }}
+                                    onClick={() => router.push(`/reports/${report.id}`)}
+                                    className="grid grid-cols-12 gap-4 p-8 items-center group cursor-pointer"
+                                >
+                                    <div className="col-span-2 font-mono text-xs font-bold">{report.sid}</div>
+                                    <div className="col-span-2 text-sm font-medium opacity-60">{report.date}</div>
+                                    <div className="col-span-3">
+                                        <p className="font-bold text-[#0B3D33]">{report.type}</p>
+                                        <p className="text-[10px] opacity-40 uppercase font-black">Agentic_Synthesis_V1</p>
+                                    </div>
+                                    <div className="col-span-2 font-serif text-2xl font-black text-[#D4AF37]">{report.risk}</div>
+                                    <div className="col-span-2">
+                                        <span className={cn(
+                                            "px-3 py-1 text-[9px] font-black uppercase tracking-widest",
+                                            report.status === 'Available' ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                                        )}>{report.status}</span>
+                                    </div>
+                                    <div className="col-span-1 flex justify-end gap-4">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                handleDownload(report.id)
+                                            }}
+                                            className="p-2 hover:bg-[#D4AF37]/10 transition-all rounded-full"
+                                        >
+                                            {downloading === report.id ? (
+                                                <div className="w-5 h-5 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+                                            ) : (
+                                                <Download className="w-5 h-5 text-[#D4AF37]" />
+                                            )}
+                                        </button>
+                                        <ChevronRight className="w-5 h-5 opacity-20 group-hover:opacity-100 transition-opacity text-[#0B3D33]" />
+                                    </div>
+                                </motion.div>
+                            ))
+                        )}
                     </div>
                 </div>
 
