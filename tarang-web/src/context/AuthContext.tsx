@@ -22,6 +22,7 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<void>
     loginDemo: (role: 'parent' | 'clinician' | 'admin') => Promise<void>
     register: (email: string, name: string, password: string, role: UserRole, orgLicense?: string, profileMetadata?: Record<string, any>) => Promise<void>
+    logout: () => void
     hasRole: (roles: UserRole[]) => boolean
     redirectByRole: () => void
 }
