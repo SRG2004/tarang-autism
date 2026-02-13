@@ -67,22 +67,26 @@ const AQ10_QUESTIONS = [
     }
 ]
 
-export default function AQ10Questionnaire({ responses, onResponseChange, onComplete }: AQ10QuestionnaireProps) {
-    // responses now stores the OPTION INDEX (0-3), not the score. -1 means unanswered.
-    const allAnswered = responses.every(r => r !== -1)
-
-    // Calculate score dynamically based on AQ-10 logic
-    const totalScore = responses.reduce((sum, optionIndex, questionIndex) => {
+export function calculateAQ10Score(responses: number[]): number {
+    return responses.reduce((sum, optionIndex, questionIndex) => {
         if (optionIndex === -1) return sum
         const question = AQ10_QUESTIONS[questionIndex]
-        // Standard: Agree(0,1)=1, Disagree(2,3)=0
-        // Reverse: Agree(0,1)=0, Disagree(2,3)=1
+        // Standard: Agree(0,1)=1 point, Disagree(2,3)=0 points
+        // Reverse: Agree(0,1)=0 points, Disagree(2,3)=1 point
         if (question.reverse) {
             return (optionIndex === 2 || optionIndex === 3) ? sum + 1 : sum
         } else {
             return (optionIndex === 0 || optionIndex === 1) ? sum + 1 : sum
         }
     }, 0)
+}
+
+export default function AQ10Questionnaire({ responses, onResponseChange, onComplete }: AQ10QuestionnaireProps) {
+    // responses now stores the OPTION INDEX (0-3), not the score. -1 means unanswered.
+    const allAnswered = responses.every(r => r !== -1)
+
+    // Calculate score dynamically based on AQ-10 logic
+    const totalScore = calculateAQ10Score(responses)
 
     return (
         <div className="max-w-4xl mx-auto">
