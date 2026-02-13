@@ -111,24 +111,51 @@ export default function LoginPage() {
                         </p>
 
                         {/* PROTOTYPE DEMO BUTTONS */}
-                        <div className="grid grid-cols-2 gap-4 mb-8">
+                        <div className="grid grid-cols-3 gap-3 mb-8">
                             <button
                                 type="button"
-                                onClick={() => loginDemo('parent')}
+                                onClick={async () => {
+                                    try {
+                                        await loginDemo('parent')
+                                    } catch (err: any) {
+                                        setError(err.message || 'Demo login failed')
+                                    }
+                                }}
                                 disabled={isLoading}
-                                className="p-4 bg-[#0B3D33] text-[#D4AF37] font-bold uppercase tracking-widest hover:bg-[#0B3D33]/90 transition-all flex flex-col items-center justify-center gap-2 rounded-lg shadow-lg shadow-[#0B3D33]/20"
+                                className="p-3 bg-[#0B3D33] text-[#D4AF37] font-bold uppercase tracking-widest hover:bg-[#0B3D33]/90 transition-all flex flex-col items-center justify-center gap-1 rounded-lg shadow-lg shadow-[#0B3D33]/20"
                             >
-                                <span className="text-xs opacity-60">Prototype Access</span>
-                                <span>Demo Parent</span>
+                                <span className="text-[10px] opacity-60">Prototype</span>
+                                <span className="text-xs">Parent</span>
                             </button>
                             <button
                                 type="button"
-                                onClick={() => loginDemo('clinician')}
+                                onClick={async () => {
+                                    try {
+                                        await loginDemo('clinician')
+                                    } catch (err: any) {
+                                        setError(err.message || 'Demo login failed')
+                                    }
+                                }}
                                 disabled={isLoading}
-                                className="p-4 bg-[#D4AF37] text-[#0B3D33] font-bold uppercase tracking-widest hover:bg-[#D4AF37]/90 transition-all flex flex-col items-center justify-center gap-2 rounded-lg shadow-lg shadow-[#D4AF37]/20"
+                                className="p-3 bg-[#D4AF37] text-[#0B3D33] font-bold uppercase tracking-widest hover:bg-[#D4AF37]/90 transition-all flex flex-col items-center justify-center gap-1 rounded-lg shadow-lg shadow-[#D4AF37]/20"
                             >
-                                <span className="text-xs opacity-60">Prototype Access</span>
-                                <span>Demo Clinician</span>
+                                <span className="text-[10px] opacity-60">Prototype</span>
+                                <span className="text-xs">Clinician</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        await loginDemo('admin')
+                                    } catch (err: any) {
+                                        setError(err.message || 'Demo login failed')
+                                    }
+                                }}
+                                disabled={isLoading}
+                                className="p-3 bg-red-800 text-white font-bold uppercase tracking-widest hover:bg-red-900 transition-all flex flex-col items-center justify-center gap-1 rounded-lg shadow-lg shadow-red-900/20"
+                            >
+                                <span className="text-[10px] opacity-60">Prototype</span>
+                                <span className="text-xs">Admin</span>
                             </button>
                         </div>
 
