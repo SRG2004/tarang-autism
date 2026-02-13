@@ -70,7 +70,13 @@ app = FastAPI(
 )
 
 # CORS must be added FIRST so it wraps all responses (including error responses)
-_origins = [o.strip() for o in settings.ALLOWED_ORIGINS if o.strip()] if isinstance(settings.ALLOWED_ORIGINS, list) else [settings.ALLOWED_ORIGINS]
+if isinstance(settings.ALLOWED_ORIGINS, str):
+    _origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
+elif isinstance(settings.ALLOWED_ORIGINS, list):
+    _origins = [o.strip() for o in settings.ALLOWED_ORIGINS if o.strip()]
+else:
+    _origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
