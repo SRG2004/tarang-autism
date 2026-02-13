@@ -6,16 +6,19 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Video, FileText, Brain, Loader2, I
 import { cn, API_URL } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth, withRoleProtection } from '@/context/AuthContext'
+import RealTimeMetrics, { type DetectedMetrics } from '@/components/RealTimeMetrics'
 
 function ScreeningPage() {
     const [step, setStep] = useState(0)
     const [loading, setLoading] = useState(false)
     const [results, setResults] = useState<any>(null)
     const [answers, setAnswers] = useState<Record<string, string>>({})
+    const [visionMetrics, setVisionMetrics] = useState<DetectedMetrics | null>(null)
     const { token } = useAuth()
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const streamRef = useRef<MediaStream | null>(null)
+    const detectionIntervalRef = useRef<number | null>(null)
     const { isLoaded, detect } = useMediaPipe()
 
     // Start/stop camera based on step
@@ -29,8 +32,74 @@ function ScreeningPage() {
                     }
                 })
                 .catch(err => console.warn("Camera not available:", err))
+
+            // Start MediaPipe detection
+            if (isLoaded && videoRef.current) {
+                const eyeContactSamples: number[] = []
+                const motorSamples: number[] = []
+                const engagementSamples: number[] = []
+
+                detectionIntervalRef.current = window.setInterval(() => {
+                    if (videoRef.current && videoRef.current.readyState >= 2) {
+                        const result = detect(videoRef.current)
+                        if (result && result.faceLandmarks && result.faceLandmarks.length > 0) {
+                            const landmarks = result.faceLandmarks[0]
+                            const landmarkCount = landmarks.length
+
+                            const leftEye = landmarks[159]
+                            const rightEye = landmarks[386]
+                            const noseTip = landmarks[1]
+
+                            let eyeContactScore = 0
+                            let faceStability = 0.5
+
+                            if (leftEye && rightEye && noseTip) {
+                                const eyeDistance = Math.sqrt(
+                                    Math.pow(rightEye.x - leftEye.x, 2) +
+                                    Math.pow(rightEye.y - leftEye.y, 2)
+                                )
+                                const noseToLeftEye = Math.sqrt(
+                                    Math.pow(noseTip.x - leftEye.x, 2) +
+                                    Math.pow(noseTip.y - leftEye.y, 2)
+                                )
+
+                                eyeContactScore = Math.min(1, Math.max(0, 1 - Math.abs(0.5 - (noseToLeftEye / eyeDistance))))
+                                eyeContactSamples.push(eyeContactScore)
+
+                                faceStability = 1 - Math.min(1, Math.abs(noseTip.z || 0) * 2)
+                                motorSamples.push(faceStability)
+                            }
+
+                            // Engagement = weighted blend of eye contact + face stability + presence
+                            const engagementScore = Math.min(1, (eyeContactScore * 0.5 + faceStability * 0.3 + 0.2))
+                            engagementSamples.push(engagementScore)
+
+                            // Keep only last 10 samples
+                            if (eyeContactSamples.length > 10) eyeContactSamples.shift()
+                            if (motorSamples.length > 10) motorSamples.shift()
+                            if (engagementSamples.length > 10) engagementSamples.shift()
+
+                            const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0
+
+                            setVisionMetrics({
+                                eye_contact: Math.round(avg(eyeContactSamples) * 100) / 100,
+                                motor_coordination: Math.round(avg(motorSamples) * 100) / 100,
+                                engagement: Math.round(avg(engagementSamples) * 100) / 100,
+                                face_detected: true,
+                                landmarks_count: landmarkCount
+                            })
+                        } else {
+                            setVisionMetrics(prev => prev ? { ...prev, face_detected: false } : null)
+                        }
+                    }
+                }, 200)
+            }
         } else {
-            // Stop camera when leaving video step
+            // Stop camera and detection when leaving video step
+            if (detectionIntervalRef.current) {
+                clearInterval(detectionIntervalRef.current)
+                detectionIntervalRef.current = null
+            }
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop())
                 streamRef.current = null
@@ -38,12 +107,16 @@ function ScreeningPage() {
         }
 
         return () => {
+            if (detectionIntervalRef.current) {
+                clearInterval(detectionIntervalRef.current)
+                detectionIntervalRef.current = null
+            }
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop())
                 streamRef.current = null
             }
         }
-    }, [step])
+    }, [step, isLoaded, detect])
 
     const steps = [
         { name: "Legal & Ethics", icon: CheckCircle2, summary: "Pediatric Data Isolation & Purpose" },
@@ -58,6 +131,8 @@ function ScreeningPage() {
             setLoading(true)
             // Actual API simulation
             try {
+                const metricsToSend = visionMetrics || { eye_contact: 0.65, motor_coordination: 0.8 }
+
                 const response = await fetch(`${API_URL}/screening/process`, {
                     method: 'POST',
                     headers: {
@@ -65,15 +140,21 @@ function ScreeningPage() {
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        video_metrics: { eye_contact: 0.65, motor_coordination: 0.8 },
+                        video_metrics: metricsToSend,
                         questionnaire_score: 12,
                         patient_name: "Arvid Smith"
                     })
                 })
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`)
+                }
+
                 const data = await response.json()
                 setResults(data)
                 setStep(4)
             } catch (e) {
+                console.error("API call failed:", e)
                 // Fallback if backend isn't up
                 setResults({
                     risk_results: { risk_score: 72.4, confidence: "High", breakdown: { behavioral: 78, questionnaire: 65, physiological: 80 } },
@@ -232,19 +313,12 @@ function ScreeningPage() {
                                         <div className="absolute inset-0 border-[30px] border-[#0B3D33]/50 pointer-events-none" />
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 border-2 border-dashed border-[#D4AF37]/30" />
 
-                                        <div className="absolute bottom-10 left-10 space-y-2">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-2 h-2 rounded-full bg-[#D4AF37] animate-ping" />
-                                                <span className="text-[10px] font-mono text-[#D4AF37] font-bold">SYSTEM_STATE: ANALYSIS_LIVE</span>
-                                            </div>
-                                            <div className="h-1 w-48 bg-white/10 overflow-hidden">
-                                                <motion.div
-                                                    animate={{ x: ["-100%", "100%"] }}
-                                                    transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-                                                    className="w-1/2 h-full bg-[#D4AF37]"
-                                                />
-                                            </div>
-                                        </div>
+                                        {/* Real-Time Metrics Overlay */}
+                                        <RealTimeMetrics
+                                            metrics={visionMetrics}
+                                            isModelLoaded={isLoaded}
+                                            variant="overlay"
+                                        />
                                     </div>
 
                                     <p className="text-[#0B3D33]/60 font-medium mb-12 flex items-start gap-4 max-w-2xl bg-[#FDFCF8] p-6">

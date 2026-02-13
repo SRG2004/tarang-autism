@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Video, Mic, MicOff, VideoOff, PhoneOff, Users, Activity, Shield, Info, HeartPulse } from 'lucide-react'
 import { cn, API_URL } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
+import { useMediaPipe } from '@/hooks/use-mediapipe'
+import RealTimeMetrics, { type DetectedMetrics } from '@/components/RealTimeMetrics'
 
 export default function LiveScreeningPage() {
     const { id: roomId } = useParams()
@@ -16,11 +18,14 @@ export default function LiveScreeningPage() {
     const [isMuted, setIsMuted] = useState(false)
     const [isVideoOff, setIsVideoOff] = useState(false)
     const [status, setStatus] = useState<'connecting' | 'connected' | 'ended'>('connecting')
+    const [liveMetrics, setLiveMetrics] = useState<DetectedMetrics | null>(null)
 
     const localVideoRef = useRef<HTMLVideoElement>(null)
     const remoteVideoRef = useRef<HTMLVideoElement>(null)
     const peerConnection = useRef<RTCPeerConnection | null>(null)
     const socket = useRef<WebSocket | null>(null)
+    const detectionIntervalRef = useRef<number | null>(null)
+    const { isLoaded, detect } = useMediaPipe()
 
     const ICE_SERVERS = {
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -100,6 +105,55 @@ export default function LiveScreeningPage() {
         }
     }, [roomId, token, user?.role])
 
+    // MediaPipe detection loop on local video
+    useEffect(() => {
+        if (!isLoaded || !localVideoRef.current) return
+
+        const eyeSamples: number[] = []
+        const motorSamples: number[] = []
+        const engSamples: number[] = []
+
+        detectionIntervalRef.current = window.setInterval(() => {
+            if (localVideoRef.current && localVideoRef.current.readyState >= 2) {
+                const result = detect(localVideoRef.current)
+                if (result?.faceLandmarks?.length) {
+                    const lm = result.faceLandmarks[0]
+                    const leftEye = lm[159], rightEye = lm[386], nose = lm[1]
+                    let eyeScore = 0, stability = 0.5
+
+                    if (leftEye && rightEye && nose) {
+                        const ed = Math.sqrt(Math.pow(rightEye.x - leftEye.x, 2) + Math.pow(rightEye.y - leftEye.y, 2))
+                        const nd = Math.sqrt(Math.pow(nose.x - leftEye.x, 2) + Math.pow(nose.y - leftEye.y, 2))
+                        eyeScore = Math.min(1, Math.max(0, 1 - Math.abs(0.5 - (nd / ed))))
+                        stability = 1 - Math.min(1, Math.abs(nose.z || 0) * 2)
+                    }
+
+                    eyeSamples.push(eyeScore)
+                    motorSamples.push(stability)
+                    engSamples.push(Math.min(1, eyeScore * 0.5 + stability * 0.3 + 0.2))
+                    if (eyeSamples.length > 10) eyeSamples.shift()
+                    if (motorSamples.length > 10) motorSamples.shift()
+                    if (engSamples.length > 10) engSamples.shift()
+
+                    const avg = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length
+                    setLiveMetrics({
+                        eye_contact: Math.round(avg(eyeSamples) * 100) / 100,
+                        motor_coordination: Math.round(avg(motorSamples) * 100) / 100,
+                        engagement: Math.round(avg(engSamples) * 100) / 100,
+                        face_detected: true,
+                        landmarks_count: lm.length
+                    })
+                } else {
+                    setLiveMetrics(prev => prev ? { ...prev, face_detected: false } : null)
+                }
+            }
+        }, 200)
+
+        return () => {
+            if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current)
+        }
+    }, [isLoaded, detect])
+
     const handleEndSession = () => {
         setStatus('ended')
         setTimeout(() => router.push('/dashboard'), 2000)
@@ -160,19 +214,12 @@ export default function LiveScreeningPage() {
                         Local_Feed (Self)
                     </div>
 
-                    {/* Real-time AI Overlay simulation */}
-                    <div className="absolute bottom-6 left-6 text-left">
-                        <div className="flex items-center gap-2 mb-2 p-2 bg-[#D4AF37] text-[#0B3D33] font-black text-[10px] uppercase">
-                            <Shield className="w-4 h-4" /> AI_Gaze_Lock_Active
-                        </div>
-                        <div className="p-4 bg-black/60 backdrop-blur-md border border-white/10">
-                            <div className="flex justify-between gap-10 mb-2">
-                                <span className="text-[9px] font-black uppercase opacity-60">Engagement</span>
-                                <span className="text-[9px] font-black text-[#D4AF37]">84%</span>
-                            </div>
-                            <div className="h-1 bg-white/10 w-32"><div className="h-full bg-[#D4AF37] w-[84%]" /></div>
-                        </div>
-                    </div>
+                    {/* Real-time AI Metrics */}
+                    <RealTimeMetrics
+                        metrics={liveMetrics}
+                        isModelLoaded={isLoaded}
+                        variant="overlay"
+                    />
                 </div>
 
                 {/* Floating Controls */}

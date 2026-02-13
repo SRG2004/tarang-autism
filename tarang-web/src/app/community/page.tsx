@@ -13,12 +13,20 @@ function CommunityHub() {
     const { token } = useAuth()
 
     useEffect(() => {
+        if (!token) return
         fetch(`${API_URL}/community`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
-            .then(res => res.json())
-            .then(data => setPosts(data))
-    }, [])
+            .then(res => {
+                if (!res.ok) throw new Error(`API ${res.status}`)
+                return res.json()
+            })
+            .then(data => setPosts(Array.isArray(data) ? data : []))
+            .catch(err => {
+                console.warn('Community fetch failed:', err)
+                setPosts([])
+            })
+    }, [token])
 
     const handlePost = async () => {
         if (!newPost.trim()) return
@@ -41,13 +49,21 @@ function CommunityHub() {
 
     const handleAiHelp = async () => {
         if (!chatQuery.trim()) return
-        const res = await fetch(`${API_URL}/community/help`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: chatQuery })
-        })
-        const data = await res.json()
-        setAiSuggestions(data.suggested_resources)
+        try {
+            const res = await fetch(`${API_URL}/community/help`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ query: chatQuery })
+            })
+            if (!res.ok) throw new Error(`API ${res.status}`)
+            const data = await res.json()
+            setAiSuggestions(Array.isArray(data.suggested_resources) ? data.suggested_resources : [])
+        } catch (err) {
+            console.warn('AI help failed:', err)
+        }
     }
 
     return (
