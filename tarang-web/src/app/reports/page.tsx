@@ -4,9 +4,11 @@ import { motion } from 'framer-motion'
 import { FileText, Download, Filter, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { cn, API_URL } from '@/lib/utils'
+import { useAuth } from '@/context/AuthContext'
 
 export default function ReportsPage() {
     const router = useRouter()
+    const { token } = useAuth()
     const [downloading, setDownloading] = useState<number | null>(null)
     const reports = [
         { id: 1, sid: '#TR-8821', date: 'Jan 25, 2026', type: 'Clinical Fusion', patient: 'Arvid Smith', risk: '72.4%', status: 'Available' },
@@ -17,7 +19,9 @@ export default function ReportsPage() {
     const handleDownload = async (id: number) => {
         setDownloading(id)
         try {
-            const response = await fetch(`${API_URL}/reports/${id}/download`)
+            const response = await fetch(`${API_URL}/reports/${id}/download`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
             if (response.ok) {
                 const blob = await response.blob()
                 const url = window.URL.createObjectURL(blob)

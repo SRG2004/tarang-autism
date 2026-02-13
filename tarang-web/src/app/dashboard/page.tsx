@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Activity, Calendar, Clock, User, ArrowUpRight, Plus, Download, ChevronRight, AlertCircle } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { cn, API_URL } from '@/lib/utils'
+import { useAuth } from '@/context/AuthContext'
 
 const data = [
     { name: 'W1', score: 38 },
@@ -16,13 +17,17 @@ const data = [
 
 export default function Dashboard() {
     const [scheduling, setScheduling] = useState<string | null>(null)
+    const { token } = useAuth()
 
     const handleSchedule = async (title: string) => {
         setScheduling(title)
         try {
             const response = await fetch(`${API_URL}/appointments/schedule`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({
                     patient_id: "TAR_9001",
                     specialist_id: "SPEC_01",

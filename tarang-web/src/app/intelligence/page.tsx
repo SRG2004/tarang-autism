@@ -4,21 +4,27 @@ import { motion } from 'framer-motion'
 import { Activity, Globe, Users, TrendingUp, AlertTriangle, Building2, MapPin } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import { cn, API_URL } from '@/lib/utils'
+import { useAuth } from '@/context/AuthContext'
 
 export default function IntelligenceDashboard() {
     const [prediction, setPrediction] = useState<any>(null)
     const [centers, setCenters] = useState<any[]>([])
+    const { token } = useAuth()
 
     useEffect(() => {
-        // Fetch Industrial Analytics
-        fetch(`${API_URL}/analytics/prediction/Arvid Smith`)
-            .then(res => res.json())
-            .then(data => setPrediction(data))
+        if (!token) return
+        const headers = { 'Authorization': `Bearer ${token}` }
 
-        fetch(`${API_URL}/centers`)
-            .then(res => res.json())
-            .then(data => setCenters(data))
-    }, [])
+        fetch(`${API_URL}/analytics/prediction/Arvid Smith`, { headers })
+            .then(res => res.ok ? res.json() : null)
+            .then(data => { if (data) setPrediction(data) })
+            .catch(err => console.warn('Prediction fetch failed:', err))
+
+        fetch(`${API_URL}/centers`, { headers })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setCenters(Array.isArray(data) ? data : []))
+            .catch(err => console.warn('Centers fetch failed:', err))
+    }, [token])
 
     const combinedData = [
         { name: 'W1', actual: 38 },
