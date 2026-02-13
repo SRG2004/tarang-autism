@@ -140,28 +140,54 @@ async def login_demo(role: str, db: Session = Depends(get_db)):
     role = role.lower()
     email = f"demo_{role}@tarang.ai"
     
-    # Find or create demo user
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        user = User(
-            email=email,
-            hashed_password="demo_hash_bypass", # Dummy hash
-            full_name=f"Demo {role.capitalize()}",
-            role=role,
-            org_id=1 if role == "clinician" else None,
-            profile_metadata={"demo": True}
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+    try:
+        # Find or create demo user
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            # Handle Organization for Clinician/Admin - Ensure Valid Org Exists
+            org_id = None
+            if role in ["clinician", "doctor"]:
+                # Check if default org exists, if not create it
+                org = db.query(Organization).first()
+                if not org:
+                    org = Organization(
+                        name="Demo Clinic",
+                        license_key="DEMO-LICENSE-001"
+                    )
+                    db.add(org)
+                    db.commit()
+                    db.refresh(org)
+                org_id = org.id
+            
+            # Create User
+            user = User(
+                email=email,
+                hashed_password="demo_hash_bypass", # Dummy hash
+                full_name=f"Demo {role.capitalize()}",
+                role=role,
+                org_id=org_id,
+                profile_metadata={"demo": True}
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
     
-    # Generate token
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email, "role": user.role, "org_id": user.org_id},
-        expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+        # Generate token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.email, "role": user.role, "org_id": user.org_id},
+            expires_delta=access_token_expires
+        )
+        return {"access_token": access_token, "token_type": "bearer"}
+        
+    except Exception as e:
+        print(f"DEMO LOGIN ERROR: {str(e)}") # Log to server console
+        db.rollback()
+        # Return the actual error message to the client for debugging
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Demo Login Failed: {str(e)}"
+        )
 
 @app.post("/auth/register", response_model=UserOut)
 async def register(user_in: UserCreate, db: Session = Depends(get_db)):
