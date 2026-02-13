@@ -68,8 +68,21 @@ const AQ10_QUESTIONS = [
 ]
 
 export default function AQ10Questionnaire({ responses, onResponseChange, onComplete }: AQ10QuestionnaireProps) {
-    const allAnswered = responses.every(r => r === 0 || r === 1)
-    const totalScore = responses.reduce((sum, val) => sum + val, 0)
+    // responses now stores the OPTION INDEX (0-3), not the score. -1 means unanswered.
+    const allAnswered = responses.every(r => r !== -1)
+
+    // Calculate score dynamically based on AQ-10 logic
+    const totalScore = responses.reduce((sum, optionIndex, questionIndex) => {
+        if (optionIndex === -1) return sum
+        const question = AQ10_QUESTIONS[questionIndex]
+        // Standard: Agree(0,1)=1, Disagree(2,3)=0
+        // Reverse: Agree(0,1)=0, Disagree(2,3)=1
+        if (question.reverse) {
+            return (optionIndex === 2 || optionIndex === 3) ? sum + 1 : sum
+        } else {
+            return (optionIndex === 0 || optionIndex === 1) ? sum + 1 : sum
+        }
+    }, 0)
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -130,8 +143,8 @@ export default function AQ10Questionnaire({ responses, onResponseChange, onCompl
                                     key={optIndex}
                                     onClick={() => onResponseChange(index, option.value)}
                                     className={`p-4 border-2 transition-all text-sm font-bold uppercase tracking-widest ${responses[index] === option.value
-                                            ? 'bg-[#D4AF37] border-[#D4AF37] text-[#0B3D33]'
-                                            : 'border-[#0B3D33]/20 text-[#0B3D33]/60 hover:border-[#D4AF37]/50'
+                                        ? 'bg-[#D4AF37] border-[#D4AF37] text-[#0B3D33]'
+                                        : 'border-[#0B3D33]/20 text-[#0B3D33]/60 hover:border-[#D4AF37]/50'
                                         }`}
                                 >
                                     <div className="flex items-center justify-center gap-2">

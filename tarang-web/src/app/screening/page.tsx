@@ -7,7 +7,7 @@ import { cn, API_URL } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth, withRoleProtection } from '@/context/AuthContext'
 import RealTimeMetrics, { type DetectedMetrics } from '@/components/RealTimeMetrics'
-import AQ10Questionnaire from '@/components/AQ10Questionnaire'
+import AQ10Questionnaire, { calculateAQ10Score } from '@/components/AQ10Questionnaire'
 
 function ScreeningPage() {
     const [step, setStep] = useState(0)
@@ -143,7 +143,7 @@ function ScreeningPage() {
                     },
                     body: JSON.stringify({
                         video_metrics: metricsToSend,
-                        questionnaire_score: questionnaireResponses.reduce((sum, val) => sum + (val === 1 ? 1 : 0), 0),
+                        questionnaire_score: calculateAQ10Score(questionnaireResponses),
                         patient_name: user?.full_name || "Patient"
                     })
                 })
