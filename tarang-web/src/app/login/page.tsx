@@ -16,7 +16,7 @@ export default function LoginPage() {
     const [name, setName] = useState('')
     const [orgLicense, setOrgLicense] = useState('')
 
-    const { login, register, isAuthenticated, redirectByRole } = useAuth()
+    const { login, loginDemo, register, isAuthenticated, redirectByRole } = useAuth()
 
     // If already authenticated, redirect
     if (isAuthenticated) {
@@ -102,13 +102,44 @@ export default function LoginPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="w-full max-w-md"
                 >
-                    <div className="mb-10">
+                    <div className="mb-8">
                         <h2 className="text-4xl font-serif font-black tracking-tighter text-[#0B3D33] mb-3">
                             Welcome Back
                         </h2>
-                        <p className="text-[#0B3D33]/60 font-medium">
-                            Select your role and sign in
+                        <p className="text-[#0B3D33]/60 font-medium mb-6">
+                            Select a demo account or sign in below
                         </p>
+
+                        {/* PROTOTYPE DEMO BUTTONS */}
+                        <div className="grid grid-cols-2 gap-4 mb-8">
+                            <button
+                                type="button"
+                                onClick={() => loginDemo('parent')}
+                                disabled={isLoading}
+                                className="p-4 bg-[#0B3D33] text-[#D4AF37] font-bold uppercase tracking-widest hover:bg-[#0B3D33]/90 transition-all flex flex-col items-center justify-center gap-2 rounded-lg shadow-lg shadow-[#0B3D33]/20"
+                            >
+                                <span className="text-xs opacity-60">Prototype Access</span>
+                                <span>Demo Parent</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => loginDemo('clinician')}
+                                disabled={isLoading}
+                                className="p-4 bg-[#D4AF37] text-[#0B3D33] font-bold uppercase tracking-widest hover:bg-[#D4AF37]/90 transition-all flex flex-col items-center justify-center gap-2 rounded-lg shadow-lg shadow-[#D4AF37]/20"
+                            >
+                                <span className="text-xs opacity-60">Prototype Access</span>
+                                <span>Demo Clinician</span>
+                            </button>
+                        </div>
+
+                        <div className="relative mb-8 text-center">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-[#0B3D33]/10"></div>
+                            </div>
+                            <span className="relative bg-[#FDFCF8] px-4 text-xs font-black uppercase tracking-widest text-[#0B3D33]/40">
+                                OR LOGIN MANUALLY
+                            </span>
+                        </div>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
@@ -237,11 +268,7 @@ export default function LoginPage() {
                         </p>
                     </div>
 
-                    <div className="mt-8 p-4 bg-[#0B3D33]/5 text-center">
-                        <p className="text-xs font-mono text-[#0B3D33]/40 uppercase tracking-widest">
-                            Demo: Use any email/password
-                        </p>
-                    </div>
+
                 </motion.div>
             </div>
         </div>

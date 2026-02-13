@@ -20,6 +20,7 @@ interface AuthContextType {
     isAuthenticated: boolean
     isLoading: boolean
     login: (email: string, password: string) => Promise<void>
+    loginDemo: (role: 'parent' | 'clinician') => Promise<void>
     register: (email: string, name: string, password: string, role: UserRole, orgLicense?: string, profileMetadata?: Record<string, any>) => Promise<void>
     logout: () => void
     hasRole: (roles: UserRole[]) => boolean
@@ -112,32 +113,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             const data = await response.json()
             const token = data.access_token
-
-            // Decodes JWT locally to get user info (sub, role, org_id)
-            const payload = JSON.parse(atob(token.split('.')[1]))
-
-            const loggedInUser: User = {
-                id: payload.sub, // sub is email in our backend
-                email: payload.sub,
-                full_name: payload.sub.split('@')[0],
-                role: payload.role.toUpperCase() as UserRole,
-                org_id: payload.org_id,
-                initials: payload.sub.substring(0, 2).toUpperCase()
-            }
-
-            setToken(token)
-            setUser(loggedInUser)
-            localStorage.setItem('tarang_token', token)
-            localStorage.setItem('tarang_user', JSON.stringify(loggedInUser))
-
-            const roleConfig = ROLE_ROUTES[loggedInUser.role]
-            router.push(roleConfig.home)
+            await processToken(token)
         } catch (error) {
             console.error('Login error:', error)
             throw error
         } finally {
             setIsLoading(false)
         }
+    }
+
+    const loginDemo = async (role: 'parent' | 'clinician') => {
+        setIsLoading(true)
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/demo/${role}`, {
+                method: 'POST'
+            })
+
+            if (!response.ok) {
+                const error = await response.json()
+                throw new Error(error.detail || 'Demo login failed')
+            }
+
+            const data = await response.json()
+            const token = data.access_token
+            await processToken(token)
+        } catch (error) {
+            console.error('Demo login error:', error)
+            throw error
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const processToken = async (token: string) => {
+        // Decodes JWT locally to get user info (sub, role, org_id)
+        const payload = JSON.parse(atob(token.split('.')[1]))
+
+        const loggedInUser: User = {
+            id: payload.sub, // sub is email in our backend
+            email: payload.sub,
+            full_name: payload.sub.split('@')[0].replace('demo_', 'Demo ').replace('_', ' '),
+            role: payload.role.toUpperCase() as UserRole,
+            org_id: payload.org_id,
+            initials: payload.sub.substring(0, 2).toUpperCase()
+        }
+
+        setToken(token)
+        setUser(loggedInUser)
+        localStorage.setItem('tarang_token', token)
+        localStorage.setItem('tarang_user', JSON.stringify(loggedInUser))
+
+        const roleConfig = ROLE_ROUTES[loggedInUser.role]
+        router.push(roleConfig.home)
     }
 
     const register = async (email: string, name: string, password: string, role: UserRole, orgLicense?: string, profileMetadata?: Record<string, any>) => {
@@ -198,6 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAuthenticated: !!user,
             isLoading,
             login,
+            loginDemo,
             register,
             logout,
             hasRole,
