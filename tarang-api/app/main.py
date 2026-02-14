@@ -1124,19 +1124,29 @@ async def get_community_posts(
     db: Session = Depends(get_db),
     current_user: TokenData = Depends(get_current_user)
 ):
-    # Industrial: Filter posts by Organization
-    posts = db.query(CommunityPost).filter(
-        CommunityPost.is_safe == 1,
-        (CommunityPost.org_id == current_user.org_id) | (CommunityPost.org_id == None)
-    ).order_by(CommunityPost.created_at.desc()).all()
-    if not posts:
+    try:
+        from sqlalchemy import or_
+        # Industrial: Filter posts by Organization (with safety for None org_id)
+        filters = [CommunityPost.is_safe == 1]
+        if current_user.org_id:
+            filters.append(or_(CommunityPost.org_id == current_user.org_id, CommunityPost.org_id == None))
+        
+        posts = db.query(CommunityPost).filter(*filters).order_by(CommunityPost.created_at.desc()).all()
+        if not posts:
+            if settings.DEMO_MODE:
+                return [
+                    {"id": 1, "author": "Sarah M.", "content": "Just finished our first 'Gaze Baseline' screening. The data visualization really helped me explain Arvid's behavior to his teacher.", "is_safe": 1},
+                    {"id": 2, "author": "David K.", "content": "Does anyone have tips for sensory-friendly routine apps that sync with Tarang?", "is_safe": 1}
+                ]
+            return []
+        return posts
+    except Exception as e:
+        logger.warning(f"Failed to fetch community posts: {e}")
         if settings.DEMO_MODE:
             return [
-                {"id": 1, "author": "Sarah M.", "content": "Just finished our first 'Gaze Baseline' screening. The data visualization really helped me explain Arvid's behavior to his teacher.", "is_safe": 1},
-                {"id": 2, "author": "David K.", "content": "Does anyone have tips for sensory-friendly routine apps that sync with Tarang?", "is_safe": 1}
+                {"id": 1, "author": "Sarah M.", "content": "Just finished our first screening!", "is_safe": 1}
             ]
         return []
-    return posts
 
 @app.post("/community/post")
 @limiter.limit("2/minute")
