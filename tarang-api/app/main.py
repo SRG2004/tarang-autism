@@ -76,7 +76,7 @@ def on_startup():
     init_db()
 
 # CORS must be added FIRST so it wraps all responses (including error responses)
-_required_origins = ["https://tarang-autism.vercel.app", "http://localhost:3000"]
+_required_origins = ["https://tarang-autism.vercel.app", "https://tarang-autism.vercel.app/", "http://localhost:3000"]
 if isinstance(settings.ALLOWED_ORIGINS, str):
     _origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
 elif isinstance(settings.ALLOWED_ORIGINS, list):
