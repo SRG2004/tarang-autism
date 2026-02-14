@@ -15,7 +15,7 @@ from app.fhir import FHIRMapper
 from app.schemas import (
     ScreeningBase, CommunityPostCreate, AppointmentSchedule,
     UserCreate, UserOut, Token, TokenData, OrganizationCreate, PatientCreate,
-    TherapyProgressCreate, TherapyProgressOut,
+    TherapyProgressCreate, TherapyProgressOut, ClinicalPatientCreate,
     UserSearchOut, PatientLinkRequest, AppointmentCreate, AppointmentOut,
     CenterAnalyticsOut
 )
@@ -442,6 +442,54 @@ async def get_clinical_patients(
         })
     
     return result
+
+@app.post("/clinical/patients")
+async def create_clinical_patient(
+    patient_in: ClinicalPatientCreate,
+    current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Allows a clinician to create a patient profile for an existing parent.
+    """
+    if current_user.role not in ["doctor", "admin"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Verify Parent Exists
+    parent_user = db.query(User).filter(User.email == patient_in.parent_email).first()
+    if not parent_user:
+        raise HTTPException(status_code=404, detail="Parent user not found")
+    
+    # Check for duplicate External ID in this org
+    existing = db.query(Patient).filter(
+        Patient.external_id == patient_in.external_id,
+        Patient.org_id == current_user.org_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Patient with this External ID already exists in your organization")
+
+    # Create Patient
+    new_patient = Patient(
+        name=patient_in.name,
+        external_id=patient_in.external_id,
+        date_of_birth=patient_in.date_of_birth,
+        phone=patient_in.phone,
+        address=patient_in.address,
+        org_id=current_user.org_id,
+        parent_user_id=parent_user.id,
+        clinician_id=current_user.org_id # Assistive logic: assign to creating doc? Or just org? 
+        # Using clinician_id field on Patient to link to creating doc
+    )
+    # Ideally find the doc user id. current_user.sub is email.
+    doc_user = db.query(User).filter(User.email == current_user.sub).first()
+    if doc_user:
+        new_patient.clinician_id = doc_user.id
+
+    db.add(new_patient)
+    db.commit()
+    db.refresh(new_patient)
+    
+    return {"status": "success", "patient_id": new_patient.id, "message": "Patient created and linked."}
 
 @app.post("/screening/process")
 @app.post("/screening/process-industrial")

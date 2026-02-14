@@ -56,6 +56,8 @@ function ClinicalDashboard() {
     const [appointments, setAppointments] = useState<any[]>([])
     // Phase 6 State
     const [centerStats, setCenterStats] = useState<any>(null)
+    const [addingChild, setAddingChild] = useState<string | null>(null) // parent email
+    const [newChildData, setNewChildData] = useState({ name: '', external_id: '', dob: '', phone: '' })
 
     const router = useRouter()
 
@@ -109,6 +111,42 @@ function ClinicalDashboard() {
             }
         } catch (e) {
             console.error(e)
+        } finally {
+            setLinking(false)
+        }
+    }
+
+    const handleAddChild = async () => {
+        if (!addingChild || !newChildData.name || !newChildData.external_id || !newChildData.dob) return;
+        setLinking(true) // Reuse loading state
+        try {
+            const res = await fetch(`${API_URL}/clinical/patients`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: newChildData.name,
+                    external_id: newChildData.external_id,
+                    date_of_birth: new Date(newChildData.dob).toISOString(),
+                    phone: newChildData.phone,
+                    parent_email: addingChild
+                })
+            })
+
+            if (res.ok) {
+                const data = await res.json()
+                alert(`Patient ${newChildData.name} created! ID: ${data.patient_id}`)
+                setIsOnboardOpen(false)
+                setAddingChild(null)
+                window.location.reload()
+            } else {
+                const err = await res.json()
+                alert(`Error: ${err.detail}`)
+            }
+        } catch (e) {
+            alert("Failed to create patient")
         } finally {
             setLinking(false)
         }
@@ -312,7 +350,55 @@ function ClinicalDashboard() {
                                                             ))}
                                                         </div>
                                                     ) : (
-                                                        <p className="text-xs opacity-50 italic">No registered children profiles found.</p>
+                                                        <div className="mt-2">
+                                                            <p className="text-xs opacity-50 italic mb-2">No registered children profiles found.</p>
+                                                            {addingChild !== parent.email ? (
+                                                                <button
+                                                                    onClick={() => setAddingChild(parent.email)}
+                                                                    className="text-xs font-bold uppercase text-[#0B3D33] underline hover:text-[#D4AF37]"
+                                                                >
+                                                                    + Create Patient Profile for {parent.full_name}
+                                                                </button>
+                                                            ) : (
+                                                                <div className="bg-[#FDFCF8] border border-[#D4AF37] p-4 space-y-3">
+                                                                    <p className="text-xs font-black uppercase tracking-widest text-[#D4AF37]">New Patient Details</p>
+                                                                    <input
+                                                                        className="w-full p-2 border border-[#0B3D33]/20 text-sm"
+                                                                        placeholder="Child Name"
+                                                                        value={newChildData.name}
+                                                                        onChange={e => setNewChildData({ ...newChildData, name: e.target.value })}
+                                                                    />
+                                                                    <input
+                                                                        className="w-full p-2 border border-[#0B3D33]/20 text-sm"
+                                                                        placeholder="External ID (e.g. PID-123)"
+                                                                        value={newChildData.external_id}
+                                                                        onChange={e => setNewChildData({ ...newChildData, external_id: e.target.value })}
+                                                                    />
+                                                                    <input
+                                                                        type="date"
+                                                                        className="w-full p-2 border border-[#0B3D33]/20 text-sm"
+                                                                        placeholder="Date of Birth"
+                                                                        value={newChildData.dob}
+                                                                        onChange={e => setNewChildData({ ...newChildData, dob: e.target.value })}
+                                                                    />
+                                                                    <div className="flex gap-2 justify-end">
+                                                                        <button
+                                                                            onClick={() => setAddingChild(null)}
+                                                                            className="px-3 py-1 text-xs font-bold uppercase opacity-50 hover:opacity-100"
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={handleAddChild}
+                                                                            disabled={linking}
+                                                                            className="px-3 py-1 bg-[#0B3D33] text-[#D4AF37] text-xs font-bold uppercase hover:opacity-90"
+                                                                        >
+                                                                            {linking ? "Creating..." : "Create & Link"}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
                                             ))}

@@ -61,6 +61,9 @@ class PatientCreate(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
 
+class ClinicalPatientCreate(PatientCreate):
+    parent_email: str
+
 class TherapyProgressBase(BaseModel):
     social_engagement: float = Field(..., ge=0, le=1)
     joint_attention: float = Field(..., ge=0, le=1)
