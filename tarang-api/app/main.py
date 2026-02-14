@@ -452,7 +452,7 @@ async def create_clinical_patient(
     """
     Allows a clinician to create a patient profile for an existing parent.
     """
-    if current_user.role not in ["doctor", "admin"]:
+    if current_user.role not in ["doctor", "clinician", "admin"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Verify Parent Exists
@@ -784,7 +784,7 @@ async def get_center_analytics(
     """
     Multitenant Analytics: Returns aggregate stats for the clinician's organization.
     """
-    if current_user.role not in ["doctor", "admin"]:
+    if current_user.role not in ["doctor", "clinician", "admin"]:
         raise HTTPException(status_code=403, detail="Access denied")
 
     if settings.DEMO_MODE:
