@@ -23,8 +23,8 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://cdn.jsdelivr.net; " +
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
               "img-src 'self' data: https: https://images.unsplash.com; " +
-              "font-src 'self' data: https://fonts.gstatic.com; " +
-              "connect-src 'self' http://localhost:8000 https://*.onrender.com wss://localhost:8000 wss://*.onrender.com https://cdn.jsdelivr.net https://storage.googleapis.com; " +
+              "font-src 'self' data: https://fonts.gstatic.com https://vercel.live; " +
+              "connect-src 'self' http://localhost:8000 https://*.onrender.com wss://localhost:8000 wss://*.onrender.com https://cdn.jsdelivr.net https://storage.googleapis.com https://vercel.live wss://ws-us3.pusher.com https://sockjs-us3.pusher.com; " +
               "worker-src 'self' blob:; " +
               "child-src 'self' blob:; " +
               "frame-src 'self' https://vercel.live;"
