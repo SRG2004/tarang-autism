@@ -637,17 +637,22 @@ async def get_reports(
         # Parents see only their linked patients
         # 1. Resolve User ID
         user = db.query(User).filter(User.email == current_user.sub).first()
+        print(f"DEBUG: Reports - User: {current_user.sub}, Found in DB: {user.id if user else 'No'}")
+        
         if user:
             # 2. Find children
             children_ids = [c.id for c in db.query(Patient).filter(Patient.parent_user_id == user.id).all()]
+            print(f"DEBUG: Reports - Children IDs: {children_ids}")
             
             if children_ids:
                  sessions = db.query(ScreeningSession).filter(ScreeningSession.patient_id.in_(children_ids)).order_by(ScreeningSession.created_at.desc()).all()
+                 print(f"DEBUG: Reports - Sessions via Children: {len(sessions)}")
             else:
                  # Legacy Fallback
                  sessions = db.query(ScreeningSession).filter(
                     ScreeningSession.patient_name == current_user.sub
                  ).order_by(ScreeningSession.created_at.desc()).all()
+                 print(f"DEBUG: Reports - Sessions via Legacy Name: {len(sessions)}")
         else:
              sessions = []
     
