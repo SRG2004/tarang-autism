@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 // @ts-ignore
 const nextConfig: NextConfig = {
-  // Remove 'standalone' output for Amplify compatibility
+  // Enable static export for Amplify
+  output: 'export',
   trailingSlash: true,
   images: {
     unoptimized: true

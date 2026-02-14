@@ -9,7 +9,7 @@ frontend:
       commands:
         - npm run build
   artifacts:
-    baseDirectory: tarang-web/.next
+    baseDirectory: tarang-web/out
     files:
       - '**/*'
   cache:
