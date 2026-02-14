@@ -624,12 +624,29 @@ async def get_reports(
     current_user: TokenData = Depends(get_current_user)
 ):
     """
-    Returns list of screening reports for the current user.
+    Returns list of screening reports based on RBAC.
     """
-    # Filter by user's email (stored in patient_name currently)
-    sessions = db.query(ScreeningSession).filter(
-        ScreeningSession.patient_name == current_user.sub
-    ).order_by(ScreeningSession.created_at.desc()).all()
+    if current_user.role in ["CLINICIAN", "ADMIN", "doctor"]:
+        # Clinicians see ALL reports (Global/Org view)
+        # In a strict multi-tenant setup, we'd filter by Org, but for this demo/MVP, seeing all is better than seeing none.
+        sessions = db.query(ScreeningSession).order_by(ScreeningSession.created_at.desc()).all()
+    else:
+        # Parents see only their linked patients
+        # 1. Resolve User ID
+        user = db.query(User).filter(User.email == current_user.sub).first()
+        if user:
+            # 2. Find children
+            children_ids = [c.id for c in db.query(Patient).filter(Patient.parent_user_id == user.id).all()]
+            
+            if children_ids:
+                 sessions = db.query(ScreeningSession).filter(ScreeningSession.patient_id.in_(children_ids)).order_by(ScreeningSession.created_at.desc()).all()
+            else:
+                 # Legacy Fallback
+                 sessions = db.query(ScreeningSession).filter(
+                    ScreeningSession.patient_name == current_user.sub
+                 ).order_by(ScreeningSession.created_at.desc()).all()
+        else:
+             sessions = []
     
     result = []
     for s in sessions:
