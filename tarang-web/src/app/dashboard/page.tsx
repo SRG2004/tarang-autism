@@ -154,14 +154,27 @@ export default function Dashboard() {
                     {/* Clinical Alerts Section */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                         <div className="p-8 border-2 border-[#D4AF37] bg-white relative">
-                            <div className="absolute top-0 right-0 bg-[#D4AF37] px-3 py-1 text-[10px] font-black text-[#0B3D33] uppercase">Urgent_Notice</div>
-                            <h4 className="flex items-center gap-3 text-lg font-black uppercase tracking-tight mb-4">
-                                <AlertCircle className="w-5 h-5 text-[#D4AF37]" /> Agent Feedback
-                            </h4>
-                            <p className="text-sm font-medium leading-relaxed mb-6 opacity-70">
-                                The **Clinical Support Agent** has detected a 12% improvement in joint-attention cues over the last 48 hours. Recommend escalating stage-2 social drills.
-                            </p>
-                            <button className="text-[10px] font-black uppercase tracking-[0.2em] border-b-2 border-[#D4AF37] pb-1 hover:opacity-50 transition-all">Review_Clinical_Proof</button>
+                            {dashboardData?.latest_recommendation ? (
+                                <>
+                                    <div className="absolute top-0 right-0 bg-[#D4AF37] px-3 py-1 text-[10px] font-black text-[#0B3D33] uppercase">Clinical_Insight</div>
+                                    <h4 className="flex items-center gap-3 text-lg font-black uppercase tracking-tight mb-4">
+                                        <AlertCircle className="w-5 h-5 text-[#D4AF37]" /> Agent Feedback
+                                    </h4>
+                                    <p className="text-sm font-medium leading-relaxed mb-6 opacity-70">
+                                        {dashboardData.latest_recommendation}
+                                    </p>
+                                    <button className="text-[10px] font-black uppercase tracking-[0.2em] border-b-2 border-[#D4AF37] pb-1 hover:opacity-50 transition-all">Review_Clinical_Proof</button>
+                                </>
+                            ) : (
+                                <>
+                                    <h4 className="flex items-center gap-3 text-lg font-black uppercase tracking-tight mb-4">
+                                        <AlertCircle className="w-5 h-5 text-[#D4AF37]" /> Agent Feedback
+                                    </h4>
+                                    <p className="text-sm font-medium leading-relaxed opacity-40">
+                                        No clinical insights yet — complete a screening to receive AI recommendations.
+                                    </p>
+                                </>
+                            )}
                         </div>
 
                         <div className="p-8 border-2 border-[#0B3D33] bg-white">
@@ -169,12 +182,16 @@ export default function Dashboard() {
                                 <Download className="w-5 h-5 text-[#D4AF37]" /> Document Hub
                             </h4>
                             <div className="space-y-4">
-                                {["Jan_Scoring_Report.pdf", "Therapy_Plan_V2.pdf"].map(doc => (
-                                    <div key={doc} className="flex justify-between items-center group cursor-pointer">
-                                        <span className="text-sm font-bold opacity-60 group-hover:opacity-100 group-hover:text-[#D4AF37] transition-all">{doc}</span>
-                                        <Download className="w-4 h-4 opacity-20 group-hover:opacity-100" />
-                                    </div>
-                                ))}
+                                {(dashboardData?.recent_reports || []).length > 0 ? (
+                                    dashboardData.recent_reports.map((doc: any) => (
+                                        <div key={doc.id} className="flex justify-between items-center group cursor-pointer">
+                                            <span className="text-sm font-bold opacity-60 group-hover:opacity-100 group-hover:text-[#D4AF37] transition-all">{doc.name}</span>
+                                            <Download className="w-4 h-4 opacity-20 group-hover:opacity-100" />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-sm opacity-40">No documents generated yet</p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -222,19 +239,19 @@ export default function Dashboard() {
                             <Plus className="w-5 h-5 opacity-40" />
                         </div>
                         <div className="space-y-6">
-                            {[
-                                { title: "Joint Attention Drift", duration: "15m", diff: "L2" },
-                                { title: "Sensory Processing", duration: "40m", diff: "L3" },
-                                { title: "Visual Narrative", duration: "25m", diff: "L1" },
-                            ].map(act => (
-                                <div key={act.title} className="p-6 border-2 border-[#FDFCF8] hover:border-[#0B3D33] transition-all group cursor-pointer bg-[#FDFCF8]">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <span className="text-[10px] font-black font-mono uppercase tracking-widest text-[#D4AF37]">{act.diff}_Protocol</span>
-                                        <span className="text-[10px] font-black opacity-30">{act.duration}</span>
+                            {(dashboardData?.therapy_activities || []).length > 0 ? (
+                                dashboardData.therapy_activities.map((act: any) => (
+                                    <div key={act.title} className="p-6 border-2 border-[#FDFCF8] hover:border-[#0B3D33] transition-all group cursor-pointer bg-[#FDFCF8]">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <span className="text-[10px] font-black font-mono uppercase tracking-widest text-[#D4AF37]">{act.diff}_Protocol</span>
+                                            <span className="text-[10px] font-black opacity-30">{act.duration}</span>
+                                        </div>
+                                        <span className="text-xl font-serif font-bold tracking-tight text-[#0B3D33]">{act.title}</span>
                                     </div>
-                                    <span className="text-xl font-serif font-bold tracking-tight text-[#0B3D33]">{act.title}</span>
-                                </div>
-                            ))}
+                                ))
+                            ) : (
+                                <p className="text-sm opacity-40 text-center py-6">Complete a screening to unlock personalized skill protocols</p>
+                            )}
                         </div>
                     </div>
                 </div>

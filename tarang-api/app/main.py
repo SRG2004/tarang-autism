@@ -306,6 +306,7 @@ async def get_dashboard_data(
     # Calculate stats
     total_screenings = len(sessions)
     latest_risk = sessions[0].risk_score if sessions else 0
+    latest_recommendation = sessions[0].clinical_recommendation if sessions else None
     
     # Generate chart data from sessions
     chart_data = []
@@ -315,11 +316,42 @@ async def get_dashboard_data(
             "score": int(session.risk_score) if session.risk_score else 0
         })
     
+    # Recent reports for Document Hub
+    recent_reports = []
+    for session in sessions[:5]:
+        recent_reports.append({
+            "id": session.id,
+            "name": f"Report_{session.created_at.strftime('%b_%d')}.pdf",
+            "date": session.created_at.strftime("%b %d, %Y")
+        })
+    
+    # Therapy activities derived from latest session breakdown
+    therapy_activities = []
+    if sessions:
+        breakdown = sessions[0].breakdown or {}
+        if isinstance(breakdown, str):
+            try:
+                import json as _json
+                breakdown = _json.loads(breakdown)
+            except Exception:
+                breakdown = {}
+        focus_map = {
+            "behavioral": {"title": "Joint Attention Drift", "duration": "15m", "diff": "L2"},
+            "questionnaire": {"title": "Cognitive Response", "duration": "25m", "diff": "L1"},
+            "physiological": {"title": "Sensory Processing", "duration": "40m", "diff": "L3"},
+        }
+        for key, meta in focus_map.items():
+            if key in breakdown:
+                therapy_activities.append(meta)
+    
     return {
         "total_screenings": total_screenings,
         "latest_risk": latest_risk,
         "chart_data": chart_data,
-        "stability_index": latest_risk if latest_risk else 0
+        "stability_index": latest_risk if latest_risk else 0,
+        "latest_recommendation": latest_recommendation,
+        "recent_reports": recent_reports,
+        "therapy_activities": therapy_activities
     }
 
 @app.get("/reports")
