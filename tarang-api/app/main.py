@@ -626,9 +626,8 @@ async def get_reports(
     """
     Returns list of screening reports based on RBAC.
     """
-    # Debug Logging for Visibility Issues
+    # Normalize role to uppercase for robust check
     role = current_user.role.upper() if current_user.role else ""
-    print(f"DEBUG: get_reports called by {current_user.sub}, Role: {role}")
     
     if role in ["CLINICIAN", "ADMIN", "DOCTOR"]:
         # Clinicians see ALL reports (Global/Org view)
@@ -1036,9 +1035,11 @@ async def get_patient_prediction(
         query = query.filter(ScreeningSession.patient_name == patient_name)
     else:
         # User defaults
-        if current_user.role == "PARENT":
+        role = current_user.role.upper() if current_user.role else ""
+        if role == "PARENT":
              # Try to find a child linked to this parent
              child = db.query(Patient).filter(Patient.parent_user_id == db.query(User).filter(User.email == current_user.sub).first().id).first()
+
              if child:
                  query = query.filter(ScreeningSession.patient_id == child.id)
              else:
