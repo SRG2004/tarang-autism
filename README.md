@@ -4,23 +4,52 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://python.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue?logo=typescript)](https://www.typescriptlang.org)
+[![AWS](https://img.shields.io/badge/AWS-Bedrock%20%7C%20Polly%20%7C%20S3-orange?logo=amazon-aws)](https://aws.amazon.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **Enterprise-grade AI platform for early autism screening, diagnosis support, and comprehensive care management**
+> 
+> **Built for AWS "AI for Bharat" Hackathon - Track 5: AI for Healthcare & Life Sciences**
 
-TARANG combines cutting-edge AI, computer vision, and healthcare interoperability standards to provide a complete autism care continuum—from early screening to long-term progress tracking.
+TARANG combines cutting-edge AI, computer vision, and healthcare interoperability standards to provide a complete autism care continuum—from early screening to long-term progress tracking. Powered by Amazon Bedrock, Amazon Polly, and AWS infrastructure for India-first accessibility.
+
+---
+
+## 🏆 **AWS "AI for Bharat" Hackathon**
+
+**Track 5: AI for Healthcare & Life Sciences**
+
+TARANG addresses India's autism diagnosis gap by leveraging AWS Native services:
+
+- **Amazon Bedrock (Claude 3.5 Sonnet):** Generates evidence-based clinical summaries with confidence scores and fallback logic
+- **Amazon Polly (Neural TTS):** Provides vernacular accessibility in 8+ Indian languages (Hindi, Hinglish, Tamil, Telugu, Bengali, Kannada, Marathi, Gujarati)
+- **Amazon S3 (SSE-KMS):** Securely stores screening videos and PDF reports with encryption
+- **Region: ap-south-1 (Mumbai):** Ensures data sovereignty and low-latency access for Indian users
+- **India-First Design:** Optimized for ₹8,000 smartphones and 2G connectivity in Tier-2/3 cities
+
+**Key Differentiators:**
+- Not using GPT — powered by Amazon Bedrock's Claude 3.5 Sonnet
+- True vernacular support via Amazon Polly, not just translated UI strings
+- FHIR R4 compliance for hospital interoperability (AWS HealthLake ready)
+- Zero-cost screening for parents, accessible from home
 
 ---
 
 ## 🎯 **Key Features**
 
-### 🧠 **Multi-Agent AI System**
+### 🧠 **Multi-Agent AI System (AWS Bedrock Powered)**
 - **Screening Agent:** ML-powered risk assessment using video analysis and questionnaires
-- **Clinical Agent:** Professional report generation with FHIR R4 compliance
+- **Clinical Agent:** Professional report generation with Amazon Bedrock (Claude 3.5 Sonnet) for evidence-based summaries
 - **Outcome Agent:** Predictive trajectory analysis for intervention planning
 - **Social Agent:** Community moderation and resource matching
 - **Therapy Agent:** Personalized intervention recommendations
 - **SRE Agent:** System health monitoring and observability
+
+### 🎙️ **Vernacular Accessibility (Amazon Polly)**
+- Text-to-speech for questionnaires in 8+ Indian languages
+- Hindi, Hinglish, Tamil, Telugu, Bengali, Kannada, Marathi, Gujarati support
+- Real-time audio synthesis for accessibility
+- Low-bandwidth optimized for Tier-2/3 cities
 
 ### 🎥 **Advanced Screening**
 - Real-time computer vision analysis using MediaPipe
@@ -28,6 +57,14 @@ TARANG combines cutting-edge AI, computer vision, and healthcare interoperabilit
 - WebRTC-enabled live screening sessions
 - Gaze tracking and social engagement metrics
 - Automated risk scoring with confidence intervals
+
+### ☁️ **AWS Native Architecture**
+- **Amazon Bedrock:** Claude 3.5 Sonnet for clinical summaries (not GPT)
+- **Amazon Polly:** Neural TTS for vernacular accessibility
+- **Amazon S3:** Encrypted video and PDF report storage with SSE-KMS
+- **AWS HealthLake:** FHIR R4 compliant data storage (future integration)
+- **Amazon Transcribe:** Voice screening in Indian languages (future integration)
+- **Region:** ap-south-1 (Mumbai) for data sovereignty
 
 ### 🏥 **Clinical Features**
 - HL7 FHIR R4 compliant data export
@@ -50,8 +87,10 @@ TARANG combines cutting-edge AI, computer vision, and healthcare interoperabilit
 - **Backend:** FastAPI, Python 3.11+, SQLAlchemy
 - **Database:** PostgreSQL with encrypted PII fields
 - **Cache/Queue:** Redis + Celery for async processing
-- **AI/ML:** Scikit-learn, MediaPipe, Transformers
+- **AI/ML:** Amazon Bedrock (Claude 3.5 Sonnet), Scikit-learn, MediaPipe
+- **AWS Services:** Bedrock, Polly, S3, HealthLake (planned), Transcribe (planned)
 - **Standards:** FHIR R4, OAuth2, OpenAPI
+- **Deployment:** AWS Amplify (Frontend), Render/AWS (Backend)
 
 ---
 
@@ -179,11 +218,17 @@ DATABASE_URL=postgresql://user:password@host:5432/database?sslmode=require
 # Redis (REQUIRED for background tasks)
 REDIS_URL=redis://default:password@host:port
 
+# AWS Configuration (REQUIRED for AI features)
+AWS_ACCESS_KEY_ID=your-aws-access-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+AWS_REGION=ap-south-1
+
+# AWS Services (Optional - for future features)
+HEALTHLAKE_DATASTORE_ID=your-healthlake-datastore-id
+S3_BUCKET_NAME=tarang-screening-data
+
 # CORS
 ALLOWED_ORIGINS=https://your-frontend-domain.com
-
-# Optional
-GEMINI_API_KEY=your-gemini-api-key
 ```
 
 ### **Frontend Environment Variables**
@@ -200,20 +245,21 @@ For production, set to your backend URL: `https://your-api-domain.com`
 
 ## 🎨 **Architecture Overview**
 
-### **Multi-Agent System**
+### **AWS-Powered Multi-Agent System**
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Frontend (Next.js)                    │
+│              Frontend (Next.js on AWS Amplify)           │
 │  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │  Screening  │  │  Dashboard   │  │  Community   │  │
 │  │  Interface  │  │  & Reports   │  │   Portal     │  │
+│  │  + Polly    │  │              │  │              │  │
 │  └─────────────┘  └──────────────┘  └──────────────┘  │
 └──────────────────────┬──────────────────────────────────┘
                        │ HTTPS/WSS
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│                   API Gateway (FastAPI)                  │
+│              API Gateway (FastAPI on Render/AWS)         │
 │                  JWT Auth + Rate Limiting                │
 └──────────────────────┬──────────────────────────────────┘
                        │
@@ -223,8 +269,8 @@ For production, set to your backend URL: `https://your-api-domain.com`
 │  Screening    │ │  Clinical  │ │   Outcome   │
 │    Agent      │ │   Agent    │ │    Agent    │
 │               │ │            │ │             │
-│ ML Risk Score │ │ PDF Report │ │ Trajectory  │
-│ Vision + Q&A  │ │ FHIR R4    │ │ Prediction  │
+│ ML Risk Score │ │ Bedrock    │ │ Trajectory  │
+│ Vision + Q&A  │ │ Claude 3.5 │ │ Prediction  │
 └───────────────┘ └────────────┘ └─────────────┘
         │              │               │
         └──────────────┼───────────────┘
@@ -232,13 +278,16 @@ For production, set to your backend URL: `https://your-api-domain.com`
            ┌───────────────────────┐
            │  PostgreSQL Database  │
            │  (Encrypted PII)      │
+           │  + AWS HealthLake     │
            └───────────────────────┘
                        │
-                       ▼
-           ┌───────────────────────┐
-           │    Redis + Celery     │
-           │  (Async Processing)   │
-           └───────────────────────┘
+        ┌──────────────┼──────────────┐
+        ▼              ▼               ▼
+┌──────────────┐ ┌──────────┐ ┌──────────────┐
+│ Amazon S3    │ │ Amazon   │ │ Redis +      │
+│ (Videos/PDFs)│ │ Polly    │ │ Celery       │
+│ SSE-KMS      │ │ (TTS)    │ │ (Async)      │
+└──────────────┘ └──────────┘ └──────────────┘
 ```
 
 ### **Key Workflows**
@@ -246,20 +295,27 @@ For production, set to your backend URL: `https://your-api-domain.com`
 #### **1. Screening Flow**
 ```
 User Input → Vision Analysis (MediaPipe) → Questionnaire → 
-ML Agent (Risk Score) → Clinical Agent (Report) → 
-FHIR Export → Database Storage
+ML Agent (Risk Score) → Clinical Agent (Bedrock Claude 3.5) → 
+FHIR Export → Database Storage → S3 (PDF/Video)
 ```
 
-#### **2. Live Session Flow**
+#### **2. Accessibility Flow (NEW)**
+```
+Question Display → User Clicks "Read Aloud" → 
+FastAPI /polly/synthesize → Amazon Polly (Neural TTS) → 
+MP3 Stream → Browser Audio Playback
+```
+
+#### **3. Live Session Flow**
 ```
 WebRTC Connection → JWT Auth → Video Stream → 
 Real-time Analysis → Engagement Metrics → Session Summary
 ```
 
-#### **3. Report Generation Flow**
+#### **4. Report Generation Flow**
 ```
-Screening Data → Clinical Agent → PDF Generation → 
-FHIR R4 Mapping → Secure Download
+Screening Data → Clinical Agent (Bedrock) → PDF Generation → 
+FHIR R4 Mapping → S3 Upload → Secure Download
 ```
 
 ---
@@ -269,12 +325,18 @@ FHIR R4 Mapping → Secure Download
 ### **Authentication**
 - `POST /auth/token` - Login (rate limited: 5/min)
 - `POST /auth/register` - User registration
+- `POST /auth/demo/{role}` - Demo login (prototype)
 
 ### **Screening**
 - `POST /screening/process` - Process screening session
 - `GET /reports` - List all reports
 - `GET /reports/{id}/download` - Download PDF report
 - `GET /reports/{id}/fhir` - Export FHIR R4 format
+
+### **AWS Services (NEW)**
+- `POST /polly/synthesize` - Text-to-speech synthesis (Amazon Polly)
+  - Supports: Hindi, English (India), Tamil, Telugu, Bengali, Kannada, Marathi, Gujarati
+  - Returns: MP3 audio stream
 
 ### **Analytics**
 - `GET /analytics/prediction/{patient_name}` - Get risk trajectory
@@ -369,11 +431,23 @@ FHIR R4 Mapping → Secure Download
 | Scikit-learn | 1.3+ | ML models |
 | Pydantic | 2.0+ | Validation |
 | ReportLab | 4.0+ | PDF generation |
+| boto3 | 1.34+ | AWS SDK |
+| aws-lambda-powertools | 2.0+ | AWS utilities |
+
+### **AWS Services**
+| Service | Purpose |
+|---------|---------|
+| Amazon Bedrock | Claude 3.5 Sonnet for clinical summaries |
+| Amazon Polly | Neural TTS for vernacular accessibility |
+| Amazon S3 | Encrypted storage (videos, PDFs) |
+| AWS HealthLake | FHIR R4 data store (planned) |
+| Amazon Transcribe | Voice screening (planned) |
+| AWS Amplify | Frontend hosting + CI/CD |
 
 ### **DevOps**
 - Docker & Docker Compose
 - GitHub Actions (CI/CD ready)
-- Vercel (Frontend deployment)
+- AWS Amplify (Frontend deployment)
 - Render (Backend deployment)
 - Neon (Database hosting)
 - Upstash (Redis hosting)
@@ -439,12 +513,15 @@ Contributions are welcome! Please follow these guidelines:
 - [x] Community features
 
 ### **Phase 2: Advanced Features** 🚧
+- [x] Amazon Bedrock integration (Claude 3.5 Sonnet)
+- [x] Amazon Polly text-to-speech (8+ Indian languages)
+- [ ] Amazon Transcribe voice screening
+- [ ] AWS HealthLake FHIR R4 integration
+- [ ] Amazon S3 video storage with encryption
 - [ ] Mobile app (React Native)
 - [ ] Offline screening support
-- [ ] Multi-language support
 - [ ] Advanced analytics dashboard
 - [ ] Telemedicine integration
-- [ ] Insurance billing integration
 
 ### **Phase 3: Enterprise** 📋
 - [ ] HIPAA compliance certification

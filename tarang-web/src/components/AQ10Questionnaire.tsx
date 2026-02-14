@@ -1,6 +1,7 @@
 "use client"
 import { motion } from 'framer-motion'
-import { CheckCircle2, Circle } from 'lucide-react'
+import { CheckCircle2, Circle, Volume2 } from 'lucide-react'
+import { useState } from 'react'
 
 interface AQ10QuestionnaireProps {
     responses: number[]
@@ -84,9 +85,61 @@ export function calculateAQ10Score(responses: number[]): number {
 export default function AQ10Questionnaire({ responses, onResponseChange, onComplete }: AQ10QuestionnaireProps) {
     // responses now stores the OPTION INDEX (0-3), not the score. -1 means unanswered.
     const allAnswered = responses.every(r => r !== -1)
+    const [playingAudio, setPlayingAudio] = useState<number | null>(null)
 
     // Calculate score dynamically based on AQ-10 logic
     const totalScore = calculateAQ10Score(responses)
+
+    const handleReadAloud = async (questionIndex: number, text: string) => {
+        try {
+            setPlayingAudio(questionIndex)
+            
+            // Get auth token from localStorage
+            const token = localStorage.getItem('token')
+            if (!token) {
+                console.error('No authentication token found')
+                setPlayingAudio(null)
+                return
+            }
+
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+            
+            const response = await fetch(`${apiUrl}/polly/synthesize`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    text: text,
+                    language: 'en-IN' // English (India) - can be made configurable
+                })
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to synthesize speech')
+            }
+
+            const audioBlob = await response.blob()
+            const audioUrl = URL.createObjectURL(audioBlob)
+            const audio = new Audio(audioUrl)
+            
+            audio.onended = () => {
+                setPlayingAudio(null)
+                URL.revokeObjectURL(audioUrl)
+            }
+            
+            audio.onerror = () => {
+                setPlayingAudio(null)
+                URL.revokeObjectURL(audioUrl)
+            }
+            
+            await audio.play()
+        } catch (error) {
+            console.error('Error playing audio:', error)
+            setPlayingAudio(null)
+        }
+    }
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -130,9 +183,23 @@ export default function AQ10Questionnaire({ responses, onResponseChange, onCompl
                                 <p className="text-xs font-black uppercase tracking-widest text-[#D4AF37] mb-2">
                                     {question.category}
                                 </p>
-                                <p className="text-lg font-medium text-[#0B3D33] leading-relaxed">
-                                    {question.text}
-                                </p>
+                                <div className="flex items-start justify-between gap-4">
+                                    <p className="text-lg font-medium text-[#0B3D33] leading-relaxed flex-1">
+                                        {question.text}
+                                    </p>
+                                    <button
+                                        onClick={() => handleReadAloud(index, question.text)}
+                                        disabled={playingAudio === index}
+                                        className={`p-2 border-2 transition-all ${
+                                            playingAudio === index
+                                                ? 'bg-[#D4AF37] border-[#D4AF37] text-[#0B3D33] animate-pulse'
+                                                : 'border-[#0B3D33]/20 text-[#0B3D33]/60 hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/10'
+                                        }`}
+                                        title="Read aloud"
+                                    >
+                                        <Volume2 className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

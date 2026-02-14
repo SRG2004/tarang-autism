@@ -2,8 +2,8 @@ import os
 import json
 import logging
 import datetime
-import boto3
 from botocore.exceptions import ClientError
+from app.core.aws_client import aws_client_manager
 
 logger = logging.getLogger(__name__)
 
@@ -15,15 +15,12 @@ class ClinicalSupportAgent:
         self.model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
         self.region = os.getenv("AWS_REGION", "us-east-1")
 
-        try:
-            self.bedrock = boto3.client(
-                "bedrock-runtime",
-                region_name=self.region
-            )
-            logger.info(f"Bedrock client initialized (region={self.region})")
-        except Exception as e:
-            logger.warning(f"Bedrock client init failed: {e}. Will use rule-based fallback.")
-            self.bedrock = None
+        # Use centralized AWS client manager
+        self.bedrock = aws_client_manager.get_bedrock_client()
+        if self.bedrock:
+            logger.info(f"Bedrock client initialized via AWSClientManager (region={self.region})")
+        else:
+            logger.warning("Bedrock client unavailable. Will use rule-based fallback.")
 
     def generate_summary(self, patient_data: dict, risk_results: dict):
         """

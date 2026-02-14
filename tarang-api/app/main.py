@@ -155,14 +155,39 @@ demo_agent = DemoAgent()
 
 @app.get("/health")
 def health_check():
+    """
+    Health check endpoint for AWS App Runner and container orchestration.
+    Returns service status and basic diagnostics.
+    """
     from app.database import DATABASE_URL
+    
     db_type = "PostgreSQL" if DATABASE_URL.startswith("postgresql") else "SQLite"
-    return {
-        "status": "operational", 
-        "timestamp": str(datetime.datetime.now()),
+    is_production = db_type == "PostgreSQL"
+    
+    # Basic health status
+    health_status = {
+        "status": "healthy",
+        "service": "TARANG API",
+        "timestamp": str(datetime.datetime.utcnow().isoformat()) + "Z",
         "database_type": db_type,
-        "is_production": db_type == "PostgreSQL"
+        "is_production": is_production,
+        "version": "1.0.0"
     }
+    
+    # Check AWS services availability (non-blocking)
+    try:
+        from app.core.aws_client import aws_client_manager
+        bedrock_available = aws_client_manager.get_bedrock_client() is not None
+        polly_available = aws_client_manager.get_polly_client() is not None
+        health_status["aws_services"] = {
+            "bedrock": "available" if bedrock_available else "unavailable",
+            "polly": "available" if polly_available else "unavailable"
+        }
+    except Exception as e:
+        logger.warning(f"AWS health check failed: {e}")
+        health_status["aws_services"] = "check_failed"
+    
+    return health_status
 
 # --- AUTH & TENANCY ROUTES ---
 
@@ -1311,6 +1336,92 @@ async def get_intervention_drift(
         "intervention_analysis": analysis,
         "risk_trajectory": trajectory
     }
+
+# --- AWS POLLY TEXT-TO-SPEECH ENDPOINT ---
+
+@app.post("/polly/synthesize")
+async def synthesize_speech(
+    text: str = Body(..., embed=True),
+    language: str = Body("en-IN", embed=True),
+    current_user: TokenData = Depends(get_current_user)
+):
+    """
+    Synthesizes text to speech using Amazon Polly.
+    Supports Hindi, English (Indian), and other Indian languages.
+    
+    Language codes:
+    - en-IN: English (India)
+    - hi-IN: Hindi
+    - ta-IN: Tamil
+    - te-IN: Telugu
+    - bn-IN: Bengali
+    - kn-IN: Kannada
+    - mr-IN: Marathi
+    - gu-IN: Gujarati
+    """
+    from app.core.aws_client import aws_client_manager
+    from botocore.exceptions import ClientError
+    
+    polly_client = aws_client_manager.get_polly_client()
+    
+    if not polly_client:
+        raise HTTPException(
+            status_code=503,
+            detail="Amazon Polly service unavailable. Please check AWS credentials."
+        )
+    
+    # Map language codes to Polly voice IDs
+    voice_map = {
+        "en-IN": "Aditi",      # Female English (Indian)
+        "hi-IN": "Aditi",      # Female Hindi
+        "ta-IN": "Aditi",      # Fallback to Aditi for Tamil
+        "te-IN": "Aditi",      # Fallback to Aditi for Telugu
+        "bn-IN": "Aditi",      # Fallback to Aditi for Bengali
+        "kn-IN": "Aditi",      # Fallback to Aditi for Kannada
+        "mr-IN": "Aditi",      # Fallback to Aditi for Marathi
+        "gu-IN": "Aditi",      # Fallback to Aditi for Gujarati
+    }
+    
+    voice_id = voice_map.get(language, "Aditi")
+    
+    try:
+        response = polly_client.synthesize_speech(
+            Text=text,
+            OutputFormat="mp3",
+            VoiceId=voice_id,
+            Engine="neural" if language in ["en-IN", "hi-IN"] else "standard"
+        )
+        
+        # Stream the audio back to the client
+        audio_stream = response.get("AudioStream")
+        if not audio_stream:
+            raise HTTPException(status_code=500, detail="Failed to generate audio")
+        
+        # Read the audio stream
+        audio_data = audio_stream.read()
+        
+        return StreamingResponse(
+            iter([audio_data]),
+            media_type="audio/mpeg",
+            headers={
+                "Content-Disposition": "inline; filename=speech.mp3",
+                "Cache-Control": "no-cache"
+            }
+        )
+        
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        logger.error(f"Polly synthesis failed: {error_code} - {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Speech synthesis failed: {error_code}"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected Polly error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Speech synthesis error: {str(e)}"
+        )
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
