@@ -60,7 +60,7 @@ class OutcomeAgent:
             "trend": trend,
             "velocity": float(round(slope, 4)),
             "predicted_scores": [float(round(p, 2)) for p in predictions.tolist()],
-            "confidence_interval": round(confidence, 2)
+            "confidence_interval": float(round(confidence, 2))
         }
 
     def generate_intervention_alert(self, prediction: Dict) -> str:

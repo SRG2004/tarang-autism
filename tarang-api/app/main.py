@@ -39,6 +39,20 @@ import json
 import re
 import logging
 import datetime
+import numpy as np
+
+# Utility: Sanitize Numpy Types for JSON Serialization
+def sanitize_numpy(obj):
+    if isinstance(obj, (np.integer, int)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, float)):
+        return float(obj)
+    elif isinstance(obj, (np.ndarray, list)):
+        return [sanitize_numpy(x) for x in obj]
+    elif isinstance(obj, dict):
+        return {k: sanitize_numpy(v) for k, v in obj.items()}
+    return obj
+
 
 # Structured Logging Setup (JSON) - Fixes CWE-117
 class JsonFormatter(logging.Formatter):
@@ -1045,6 +1059,8 @@ async def get_patient_prediction(
 
              if child:
                  query = query.filter(ScreeningSession.patient_id == child.id)
+                 if not patient_name:
+                     patient_name = child.name
              else:
                  return {"error": "No patient context found"}
         else:
@@ -1052,7 +1068,8 @@ async def get_patient_prediction(
              latest_session = db.query(ScreeningSession).order_by(ScreeningSession.created_at.desc()).first()
              if latest_session and latest_session.patient_id:
                  query = query.filter(ScreeningSession.patient_id == latest_session.patient_id)
-                 # Optional: Add a note to response? (Hard to do without changing return shape significantly)
+                 if not patient_name:
+                     patient_name = latest_session.patient_name
              elif settings.DEMO_MODE:
                  pass # Allow fall-through to generate dummy data
              else:
@@ -1070,13 +1087,13 @@ async def get_patient_prediction(
     prediction = outcome_agent.predict_trajectory(scores)
     alert = outcome_agent.generate_intervention_alert(prediction)
     
-    return {
+    return sanitize_numpy({
         "patient": patient_name,
         "historical_count": len(sessions),
         "prediction": prediction,
         "clinical_insight": alert,
         "history": scores # Return raw scores for frontend charting
-    }
+    })
 
 @app.get("/centers")
 async def get_centers(
