@@ -519,6 +519,23 @@ async def process_screening_industrial(
         session_id = None
         try:
             logger.info("Persistence attempt", extra={"patient": re.sub(r"[^\w]", "_", patient_name)})
+            
+            # Sanitize numpy types to native Python types for SQLAlchemy/JSON
+            def sanitize_numpy(obj):
+                if isinstance(obj, (np.integer, int)):
+                    return int(obj)
+                elif isinstance(obj, (np.floating, float)):
+                    return float(obj)
+                elif isinstance(obj, (np.ndarray, list)):
+                    return [sanitize_numpy(x) for x in obj]
+                elif isinstance(obj, dict):
+                    return {k: sanitize_numpy(v) for k, v in obj.items()}
+                return obj
+            
+            # Import numpy locally to avoid global dependency if not used elsewhere
+            import numpy as np
+            risk_results = sanitize_numpy(risk_results)
+
             db_session = ScreeningSession(
                 patient_name=patient_name, # Display name only
                 patient_id=patient_id,     # Linkage Key
@@ -1007,8 +1024,7 @@ async def get_patient_prediction(
 
 @app.get("/centers")
 async def get_centers(
-    db: Session = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     centers = db.query(ClinicCenter).all()
     if not centers:
