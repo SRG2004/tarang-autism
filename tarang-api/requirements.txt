@@ -21,3 +21,5 @@ ucimlrepo
 sqlalchemy-utils
 cryptography
 boto3
+aws-lambda-powertools
+fhir.resources
