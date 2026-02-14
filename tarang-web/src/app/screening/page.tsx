@@ -286,10 +286,23 @@ function ScreeningPage() {
                                             <label htmlFor="c2" className="font-bold text-[#0B3D33] leading-snug">I understand the results are for Clinical Support only and do not constitute a diagnosis.</label>
                                         </div>
                                     </div>
-                                    <div className="flex gap-4">
-                                        <button type="button" onClick={handleNext} className="bg-[#0B3D33] text-[#D4AF37] px-10 py-5 font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-all cursor-pointer relative z-20">
-                                            Initialize Session
+                                    <div className="flex gap-4 items-center">
+                                        <button
+                                            type="button"
+                                            onClick={handleNext}
+                                            disabled={!patientId && !loading} // Simple check
+                                            className={cn(
+                                                "bg-[#0B3D33] text-[#D4AF37] px-10 py-5 font-black uppercase tracking-widest transition-all cursor-pointer relative z-20",
+                                                (!patientId) && "opacity-50 cursor-not-allowed grayscale"
+                                            )}
+                                        >
+                                            {patientId ? "Initialize Session" : "No Patient Profile Found"}
                                         </button>
+                                        {!patientId && (
+                                            <Link href="/profile" className="text-sm font-bold text-red-500 underline z-20 relative">
+                                                Please add a child profile first
+                                            </Link>
+                                        )}
                                     </div>
                                 </div>
                             )}

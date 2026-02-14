@@ -537,6 +537,7 @@ async def process_screening_industrial(
         except Exception as db_error:
             logger.error(f"❌ DB persistence failed: {str(db_error)}")
             db.rollback()
+            raise HTTPException(status_code=500, detail=f"Database Persistence Failed: {str(db_error)}")
         
         # 3. Offload Heavy AI to Worker (optional)
         async_status = "Sync mode"
