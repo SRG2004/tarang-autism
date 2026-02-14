@@ -50,7 +50,7 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     full_name = Column(EncryptedType(String, SECRET_KEY, AesEngine, 'pkcs5'))
-    role = Column(String, default="parent")  # parent, doctor, admin
+    role = Column(String, default="parent")  # parent, clinician, admin
     org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     profile_metadata = Column(JSON, nullable=True)

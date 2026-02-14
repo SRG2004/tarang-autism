@@ -53,6 +53,15 @@ def sanitize_numpy(obj):
         return {k: sanitize_numpy(v) for k, v in obj.items()}
     return obj
 
+# RBAC: Canonical Roles = parent, clinician, admin
+ALLOWED_ROLES = {"PARENT", "CLINICIAN", "ADMIN"}
+
+def require_role(current_user, allowed: list):
+    """Case-insensitive role gate. Raises 403 if not authorized."""
+    role = (current_user.role or "").upper()
+    if role not in {r.upper() for r in allowed}:
+        raise HTTPException(status_code=403, detail="Access denied")
+
 
 # Structured Logging Setup (JSON) - Fixes CWE-117
 class JsonFormatter(logging.Formatter):
@@ -172,7 +181,7 @@ async def login_demo(role: str, db: Session = Depends(get_db)):
         if not user:
             # Handle Organization for Clinician/Admin - Ensure Valid Org Exists
             org_id = None
-            if role in ["clinician", "doctor"]:
+            if role in ["clinician", "admin"]:
                 # Check if default org exists, if not create it
                 org = db.query(Organization).first()
                 if not org:
@@ -424,9 +433,8 @@ async def get_clinical_patients(
     current_user: TokenData = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Only for doctors/clinicians
-    if current_user.role not in ["doctor", "clinician", "admin"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+    # Only for clinicians/admins
+    require_role(current_user, ["CLINICIAN", "ADMIN"])
     
     # Get patients from same organization
     patients = db.query(Patient).filter(
@@ -466,8 +474,7 @@ async def create_clinical_patient(
     """
     Allows a clinician to create a patient profile for an existing parent.
     """
-    if current_user.role not in ["doctor", "clinician", "admin"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+    require_role(current_user, ["CLINICIAN", "ADMIN"])
 
     # Verify Parent Exists
     parent_user = db.query(User).filter(User.email == patient_in.parent_email).first()
@@ -515,7 +522,7 @@ async def process_screening_industrial(
     current_user: TokenData = Depends(get_current_user)
 ):
     # Industrial isolation: Parents see only their sub-scoped data, 
-    # Doctors see everything in their Organization.
+    # Clinicians see everything in their Organization.
     org_scope = current_user.org_id
     video_metrics = payload.video_metrics
     questionnaire_score = payload.questionnaire_score
@@ -643,7 +650,7 @@ async def get_reports(
     # Normalize role to uppercase for robust check
     role = current_user.role.upper() if current_user.role else ""
     
-    if role in ["CLINICIAN", "ADMIN", "DOCTOR"]:
+    if role in ["CLINICIAN", "ADMIN"]:
         # Clinicians see ALL reports (Global/Org view)
         # In a strict multi-tenant setup, we'd filter by Org, but for this demo/MVP, seeing all is better than seeing none.
         sessions = db.query(ScreeningSession).order_by(ScreeningSession.created_at.desc()).all()
@@ -747,7 +754,7 @@ async def get_report_detail(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
-    # Scoping check: Doctors can see anything in their Org, Parents see only their sub-scoped ID
+    # Scoping check: Clinicians can see anything in their Org, Parents see only their sub-scoped ID
     # (Simplified for now: check Org linkage)
     # Note: ScreeningSession needs a patient_id or org_id for strict enforcement.
     # For now, we'll use the patient relationship if it exists.
@@ -861,8 +868,7 @@ async def get_center_analytics(
     """
     Multitenant Analytics: Returns aggregate stats for the clinician's organization.
     """
-    if current_user.role not in ["doctor", "clinician", "admin"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+    require_role(current_user, ["CLINICIAN", "ADMIN"])
 
     if settings.DEMO_MODE:
         # Synthetic Aggregate Data
@@ -934,9 +940,7 @@ async def link_patient(
     db: Session = Depends(get_db),
     current_user: TokenData = Depends(get_current_user)
 ):
-    # Verify clinician role
-    if current_user.role != "CLINICIAN":
-        raise HTTPException(status_code=403, detail="Only clinicians can link patients")
+    require_role(current_user, ["CLINICIAN", "ADMIN"])
     
     # Associate Parent
     parent = db.query(User).filter(User.email == payload.parent_email).first()
