@@ -634,27 +634,25 @@ async def get_reports(
         # In a strict multi-tenant setup, we'd filter by Org, but for this demo/MVP, seeing all is better than seeing none.
         sessions = db.query(ScreeningSession).order_by(ScreeningSession.created_at.desc()).all()
     else:
-        # Parents see only their linked patients
-        # 1. Resolve User ID
+        # Parents see their linked patients + legacy name matches
         user = db.query(User).filter(User.email == current_user.sub).first()
-        print(f"DEBUG: Reports - User: {current_user.sub}, Found in DB: {user.id if user else 'No'}")
-        
+        children_ids = []
         if user:
-            # 2. Find children
             children_ids = [c.id for c in db.query(Patient).filter(Patient.parent_user_id == user.id).all()]
-            print(f"DEBUG: Reports - Children IDs: {children_ids}")
-            
-            if children_ids:
-                 sessions = db.query(ScreeningSession).filter(ScreeningSession.patient_id.in_(children_ids)).order_by(ScreeningSession.created_at.desc()).all()
-                 print(f"DEBUG: Reports - Sessions via Children: {len(sessions)}")
-            else:
-                 # Legacy Fallback
-                 sessions = db.query(ScreeningSession).filter(
-                    ScreeningSession.patient_name == current_user.sub
-                 ).order_by(ScreeningSession.created_at.desc()).all()
-                 print(f"DEBUG: Reports - Sessions via Legacy Name: {len(sessions)}")
-        else:
-             sessions = []
+        
+        from sqlalchemy import or_
+        
+        # Hybrid Query: Match by Child ID OR Exact Email Match OR Full Name Match
+        # This covers all historical data inconsistencies
+        sessions = db.query(ScreeningSession).filter(
+            or_(
+                ScreeningSession.patient_id.in_(children_ids) if children_ids else False,
+                ScreeningSession.patient_name == current_user.sub,
+                ScreeningSession.patient_name == (user.full_name if user else "")
+            )
+        ).order_by(ScreeningSession.created_at.desc()).all()
+        
+        print(f"DEBUG: Reports - User: {current_user.sub}, Children: {children_ids}, Found Sessions: {len(sessions)}")
     
     result = []
     for s in sessions:
