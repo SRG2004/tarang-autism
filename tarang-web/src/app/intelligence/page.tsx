@@ -99,25 +99,32 @@ export default function IntelligenceDashboard() {
                             </div>
                         </div>
 
+// ... (inside the component return)
+
+                        {/* Outcome Agent Insight */}
                         <div className="space-y-10">
                             <div className="p-10 border-2 border-[#D4AF37] bg-white text-[#0B3D33]">
                                 <h4 className="text-xs font-black uppercase tracking-widest mb-6 opacity-40">Outcome_Agent_Insight</h4>
                                 <p className="text-2xl font-serif font-bold leading-tight mb-8">
-                                    {prediction?.clinical_insight || "Analyzing longitudinal drift..."}
+                                    {prediction?.clinical_insight || "Complete more screenings to generate longitudinal predictions."}
                                 </p>
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-[2px] bg-[#D4AF37]" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Confidence: {prediction?.prediction?.confidence_interval * 100}%</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest">
+                                        Confidence: {prediction?.prediction?.confidence_interval ? `${Math.round(prediction.prediction.confidence_interval * 100)}%` : "—"}
+                                    </span>
                                 </div>
                             </div>
 
                             <div className="p-10 border-2 border-[#0B3D33] bg-[#0B3D33] text-[#FDFCF8]">
                                 <h4 className="text-xs font-black uppercase tracking-widest text-[#D4AF37] mb-6">Velocity_Matrix</h4>
                                 <div className="flex items-end justify-between">
-                                    <span className="text-4xl font-serif font-black">{prediction?.prediction?.trend || "..."}</span>
+                                    <span className="text-4xl font-serif font-black">{prediction?.prediction?.trend || "—"}</span>
                                     <Activity className="w-10 h-10 text-[#D4AF37]" />
                                 </div>
-                                <p className="mt-6 text-[10px] font-mono opacity-40">Velocity: {prediction?.prediction?.velocity} | Inference_Delay: 142ms</p>
+                                <p className="mt-6 text-[10px] font-mono opacity-40">
+                                    Velocity: {prediction?.prediction?.velocity || "—"} | Inference_Delay: {prediction ? "142ms" : "—"}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -130,7 +137,7 @@ export default function IntelligenceDashboard() {
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-                        {centers.map((c: any) => (
+                        {centers.length > 0 ? centers.map((c: any) => (
                             <motion.div
                                 key={c.id}
                                 whileHover={{ y: -10 }}
@@ -144,7 +151,11 @@ export default function IntelligenceDashboard() {
                                     <span className="text-3xl font-serif font-black text-[#D4AF37]">{c.patients || "0"}</span>
                                 </div>
                             </motion.div>
-                        ))}
+                        )) : (
+                            <div className="col-span-4 p-8 border border-dashed border-[#0B3D33]/30 text-center text-[#0B3D33]/40 font-mono text-xs uppercase tracking-widest">
+                                No centers connected to grid
+                            </div>
+                        )}
                     </div>
                 </div>
 
