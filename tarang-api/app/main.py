@@ -1047,57 +1047,61 @@ async def get_patient_prediction(
     db: Session = Depends(get_db),
     current_user: TokenData = Depends(get_current_user)
 ):
-    query = db.query(ScreeningSession)
-    
-    if patient_id:
-        query = query.filter(ScreeningSession.patient_id == patient_id)
-    elif patient_name:
-        # Fallback to name-based lookup (less reliable)
-        query = query.filter(ScreeningSession.patient_name == patient_name)
-    else:
-        # User defaults
-        role = current_user.role.upper() if current_user.role else ""
-        if role == "PARENT":
-             # Try to find a child linked to this parent
-             child = db.query(Patient).filter(Patient.parent_user_id == db.query(User).filter(User.email == current_user.sub).first().id).first()
-
-             if child:
-                 query = query.filter(ScreeningSession.patient_id == child.id)
-                 if not patient_name:
-                     patient_name = child.name
-             else:
-                 return {"error": "No patient context found"}
-        else:
-             # For Clinicians/Admins: Default to the MOST RECENT patient's data (Global Dashboard View)
-             latest_session = db.query(ScreeningSession).order_by(ScreeningSession.created_at.desc()).first()
-             if latest_session and latest_session.patient_id:
-                 query = query.filter(ScreeningSession.patient_id == latest_session.patient_id)
-                 if not patient_name:
-                     patient_name = latest_session.patient_name
-             elif settings.DEMO_MODE:
-                 pass # Allow fall-through to generate dummy data
-             else:
-                 return {"error": "Patient ID or Name required"}
-
-    sessions = query.order_by(ScreeningSession.created_at.asc()).all()
-    scores = [s.risk_score for s in sessions]
-    
-    if not scores:
-        if settings.DEMO_MODE:
-            scores = [38.0, 42.5, 35.0, 55.2]
-        else:
-            return {"patient": patient_name, "historical_count": 0, "prediction": None, "clinical_insight": None, "history": []}
+    try:
+        query = db.query(ScreeningSession)
         
-    prediction = outcome_agent.predict_trajectory(scores)
-    alert = outcome_agent.generate_intervention_alert(prediction)
-    
-    return sanitize_numpy({
-        "patient": patient_name,
-        "historical_count": len(sessions),
-        "prediction": prediction,
-        "clinical_insight": alert,
-        "history": scores # Return raw scores for frontend charting
-    })
+        if patient_id:
+            query = query.filter(ScreeningSession.patient_id == patient_id)
+        elif patient_name:
+            query = query.filter(ScreeningSession.patient_name == patient_name)
+        else:
+            role = (current_user.role or "").upper()
+            if role == "PARENT":
+                 user_obj = db.query(User).filter(User.email == current_user.sub).first()
+                 child = None
+                 if user_obj:
+                     child = db.query(Patient).filter(Patient.parent_user_id == user_obj.id).first()
+
+                 if child:
+                     query = query.filter(ScreeningSession.patient_id == child.id)
+                     if not patient_name:
+                         patient_name = child.name
+                 else:
+                     # No child linked — fall back to name-based lookup
+                     query = query.filter(ScreeningSession.patient_name == current_user.sub)
+            else:
+                 latest_session = db.query(ScreeningSession).order_by(ScreeningSession.created_at.desc()).first()
+                 if latest_session and latest_session.patient_id:
+                     query = query.filter(ScreeningSession.patient_id == latest_session.patient_id)
+                     if not patient_name:
+                         patient_name = latest_session.patient_name
+                 elif settings.DEMO_MODE:
+                     pass
+                 else:
+                     return {"patient": patient_name, "historical_count": 0, "prediction": None, "clinical_insight": None, "history": []}
+
+        sessions = query.order_by(ScreeningSession.created_at.asc()).all()
+        scores = [float(s.risk_score) for s in sessions if s.risk_score is not None]
+        
+        if not scores:
+            if settings.DEMO_MODE:
+                scores = [38.0, 42.5, 35.0, 55.2]
+            else:
+                return {"patient": patient_name, "historical_count": 0, "prediction": None, "clinical_insight": None, "history": []}
+            
+        prediction = outcome_agent.predict_trajectory(scores)
+        alert = outcome_agent.generate_intervention_alert(prediction)
+        
+        return sanitize_numpy({
+            "patient": patient_name,
+            "historical_count": len(sessions),
+            "prediction": prediction,
+            "clinical_insight": alert,
+            "history": scores
+        })
+    except Exception as e:
+        logger.error(f"Prediction endpoint error: {e}")
+        return {"patient": patient_name, "historical_count": 0, "prediction": None, "clinical_insight": None, "history": [], "error": str(e)}
 
 @app.get("/centers")
 async def get_centers(
