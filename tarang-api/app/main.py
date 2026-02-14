@@ -1026,15 +1026,25 @@ async def get_patient_prediction(
 async def get_centers(
     db: Session = Depends(get_db)
 ):
-    centers = db.query(ClinicCenter).all()
-    if not centers:
+    try:
+        centers = db.query(ClinicCenter).all()
+        if not centers:
+            if settings.DEMO_MODE:
+                return [
+                    {"id": 1, "name": "Tarang Delhi Center", "location": "New Delhi", "patients": 142},
+                    {"id": 2, "name": "Tarang Mumbai Hub", "location": "Mumbai", "patients": 89}
+                ]
+            return []
+        return centers
+    except Exception as e:
+        logger.warning(f"Failed to fetch centers (DB error): {e}")
+        # Fallback for stability
         if settings.DEMO_MODE:
             return [
-                {"id": 1, "name": "Tarang Delhi Center", "location": "New Delhi", "patients": 142},
-                {"id": 2, "name": "Tarang Mumbai Hub", "location": "Mumbai", "patients": 89}
+                {"id": 1, "name": "Tarang Delhi Center (Fallback)", "location": "New Delhi", "patients": 142},
+                {"id": 2, "name": "Tarang Mumbai Hub (Fallback)", "location": "Mumbai", "patients": 89}
             ]
         return []
-    return centers
 
 @app.get("/community")
 async def get_community_posts(

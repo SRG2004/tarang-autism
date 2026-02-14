@@ -81,15 +81,21 @@ export default function IntelligenceDashboard() {
                             </h3>
 
                             <div className="h-[400px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={chartData}>
-                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 900 }} />
-                                        <YAxis hide domain={[0, 100]} />
-                                        <Tooltip contentStyle={{ borderRadius: 0, border: '2px solid #0B3D33' }} />
-                                        <Line type="monotone" dataKey="actual" stroke="#0B3D33" strokeWidth={4} dot={{ r: 6, fill: "#0B3D33" }} />
-                                        <Line type="monotone" dataKey="pred" stroke="#D4AF37" strokeWidth={4} strokeDasharray="10 10" dot={{ r: 6, fill: "#D4AF37" }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
+                                {chartData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={chartData}>
+                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 900 }} />
+                                            <YAxis hide domain={[0, 100]} />
+                                            <Tooltip contentStyle={{ borderRadius: 0, border: '2px solid #0B3D33' }} />
+                                            <Line type="monotone" dataKey="actual" stroke="#0B3D33" strokeWidth={4} dot={{ r: 6, fill: "#0B3D33" }} />
+                                            <Line type="monotone" dataKey="pred" stroke="#D4AF37" strokeWidth={4} strokeDasharray="10 10" dot={{ r: 6, fill: "#D4AF37" }} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-[#0B3D33]/30 font-black uppercase tracking-widest text-sm">
+                                        Initializing Predictive Model...
+                                    </div>
+                                )}
                             </div>
                         </div>
 
