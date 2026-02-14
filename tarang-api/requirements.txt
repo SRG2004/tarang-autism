@@ -20,3 +20,4 @@ pandas
 ucimlrepo
 sqlalchemy-utils
 cryptography
+boto3
