@@ -532,13 +532,36 @@ async def process_screening_industrial(
                     return {k: sanitize_numpy(v) for k, v in obj.items()}
                 return obj
             
-            # Import numpy locally to avoid global dependency if not used elsewhere
+            # Sanitize numpy types to native Python types for SQLAlchemy/JSON
             import numpy as np
             risk_results = sanitize_numpy(risk_results)
 
+            # Auto-Link Logic: If patient_id is 0 or invalid, try to recover context or create placeholder
+            final_patient_id = patient_id
+            if not final_patient_id or final_patient_id == 0:
+                # Try to find if 'patient_id' passed was actually a User ID (common frontend mixup)
+                possible_parent = db.query(User).filter(User.id == patient_id).first()
+                if possible_parent:
+                    # Check if this parent has a child
+                    child = db.query(Patient).filter(Patient.parent_user_id == possible_parent.id).first()
+                    if child:
+                        final_patient_id = child.id
+                    else:
+                        # Auto-create child profile for this parent
+                        new_child = Patient(
+                            name=f"Child of {possible_parent.full_name}",
+                            date_of_birth=datetime.datetime.utcnow(), 
+                            org_id=possible_parent.org_id,
+                            parent_user_id=possible_parent.id
+                        )
+                        db.add(new_child)
+                        db.flush() # Get ID
+                        final_patient_id = new_child.id
+                        logger.info(f"Auto-created child profile {final_patient_id} for user {possible_parent.id}")
+
             db_session = ScreeningSession(
-                patient_name=patient_name, # Display name only
-                patient_id=patient_id,     # Linkage Key
+                patient_name=patient_name,
+                patient_id=final_patient_id if final_patient_id else None, # Allow NULL if still unresolvable (orphaned session)
                 risk_score=risk_results["risk_score"],
                 confidence=risk_results["confidence"],
                 dissonance_factor=risk_results.get("dissonance_factor"),

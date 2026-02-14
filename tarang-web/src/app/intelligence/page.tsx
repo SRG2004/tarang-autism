@@ -7,8 +7,10 @@ import { cn, API_URL } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 
 export default function IntelligenceDashboard() {
+    // ... (inside component)
     const [prediction, setPrediction] = useState<any>(null)
     const [centers, setCenters] = useState<any[]>([])
+    const [error, setError] = useState<string | null>(null) // New error state
     const { token, user } = useAuth()
 
     useEffect(() => {
@@ -17,15 +19,28 @@ export default function IntelligenceDashboard() {
 
         // Backend now auto-resolves patient context for Parents, or accepts ?patient_id=
         fetch(`${API_URL}/analytics/prediction`, { headers })
-            .then(res => res.ok ? res.json() : null)
-            .then(data => { if (data) setPrediction(data) })
-            .catch(err => console.warn('Prediction fetch failed:', err))
+            .then(res => res.json()) // Parse JSON regardless of status
+            .then(data => {
+                if (data.error) {
+                    setError(data.error)
+                    setPrediction(null)
+                } else {
+                    setPrediction(data)
+                    setError(null)
+                }
+            })
+            .catch(err => {
+                console.warn('Prediction fetch failed:', err)
+                setError("Failed to load predictive analytics.")
+            })
 
         fetch(`${API_URL}/centers`, { headers })
             .then(res => res.ok ? res.json() : [])
             .then(data => setCenters(Array.isArray(data) ? data : []))
             .catch(err => console.warn('Centers fetch failed:', err))
     }, [token])
+
+
 
     const [chartData, setChartData] = useState<any[]>([])
 
@@ -80,23 +95,39 @@ export default function IntelligenceDashboard() {
                                 Predictive Outcome Modeling
                             </h3>
 
-                            <div className="h-[400px] w-full">
-                                {chartData.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={chartData}>
-                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 900 }} />
-                                            <YAxis hide domain={[0, 100]} />
-                                            <Tooltip contentStyle={{ borderRadius: 0, border: '2px solid #0B3D33' }} />
-                                            <Line type="monotone" dataKey="actual" stroke="#0B3D33" strokeWidth={4} dot={{ r: 6, fill: "#0B3D33" }} />
-                                            <Line type="monotone" dataKey="pred" stroke="#D4AF37" strokeWidth={4} strokeDasharray="10 10" dot={{ r: 6, fill: "#D4AF37" }} />
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                ) : (
-                                    <div className="flex items-center justify-center h-full text-[#0B3D33]/30 font-black uppercase tracking-widest text-sm">
-                                        Initializing Predictive Model...
-                                    </div>
-                                )}
-                            </div>
+                            {error ? (
+                                <div className="h-[400px] w-full flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-red-200 bg-red-50">
+                                    <AlertTriangle className="w-8 h-8 text-red-400 mb-4" />
+                                    <p className="text-[#0B3D33] font-bold mb-2">Unable to Generate Prediction</p>
+                                    <p className="text-sm text-[#0B3D33]/60 max-w-xs">{error}</p>
+                                    {error.includes("context") && (
+                                        <button
+                                            onClick={() => window.location.href = '/profile'}
+                                            className="mt-6 px-4 py-2 bg-[#0B3D33] text-[#D4AF37] text-xs font-black uppercase tracking-widest hover:bg-[#D4AF37] hover:text-[#0B3D33] transition-colors"
+                                        >
+                                            Complete Profile
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="h-[400px] w-full">
+                                    {chartData.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <LineChart data={chartData}>
+                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 900 }} />
+                                                <YAxis hide domain={[0, 100]} />
+                                                <Tooltip contentStyle={{ borderRadius: 0, border: '2px solid #0B3D33' }} />
+                                                <Line type="monotone" dataKey="actual" stroke="#0B3D33" strokeWidth={4} dot={{ r: 6, fill: "#0B3D33" }} />
+                                                <Line type="monotone" dataKey="pred" stroke="#D4AF37" strokeWidth={4} strokeDasharray="10 10" dot={{ r: 6, fill: "#D4AF37" }} />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-[#0B3D33]/30 font-black uppercase tracking-widest text-sm">
+                                            {prediction ? "Insufficient data for chart" : "Initializing Predictive Model..."}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
 // ... (inside the component return)
