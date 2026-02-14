@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, Float, Integer, JSON, DateTime, ForeignKey, Boolean
+from sqlalchemy import create_engine, Column, String, Float, Integer, JSON, DateTime, ForeignKey, Boolean, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy_utils import EncryptedType
@@ -125,9 +125,39 @@ class ScreeningSession(Base):
 
 
 def init_db():
-    """Explicitly create tables. Call from startup, not import-time."""
+    """Explicitly create tables + migrate missing columns for production."""
     Base.metadata.create_all(bind=engine)
+    
+    # Migrate missing columns on existing tables (create_all won't ALTER)
+    if not DATABASE_URL.startswith("sqlite"):
+        _migrate_missing_columns()
+
+
+def _migrate_missing_columns():
+    """Add columns that exist in the ORM but not in the live database."""
+    migrations = [
+        ("screening_sessions", "patient_id", "INTEGER"),
+        ("screening_sessions", "dissonance_factor", "FLOAT"),
+        ("screening_sessions", "interpretation", "VARCHAR"),
+    ]
+    
+    db = SessionLocal()
+    try:
+        for table, column, col_type in migrations:
+            try:
+                db.execute(
+                    text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {col_type}")
+                )
+            except Exception:
+                pass  # Column already exists or DB doesn't support IF NOT EXISTS
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
 
 # Auto-init for development convenience (SQLite only)
 if DATABASE_URL.startswith("sqlite"):
     init_db()
+
