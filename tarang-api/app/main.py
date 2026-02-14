@@ -626,7 +626,10 @@ async def get_reports(
     """
     Returns list of screening reports based on RBAC.
     """
-    if current_user.role in ["CLINICIAN", "ADMIN", "doctor"]:
+    # Normalize role to uppercase for robust check
+    role = current_user.role.upper() if current_user.role else ""
+    
+    if role in ["CLINICIAN", "ADMIN", "DOCTOR"]:
         # Clinicians see ALL reports (Global/Org view)
         # In a strict multi-tenant setup, we'd filter by Org, but for this demo/MVP, seeing all is better than seeing none.
         sessions = db.query(ScreeningSession).order_by(ScreeningSession.created_at.desc()).all()
