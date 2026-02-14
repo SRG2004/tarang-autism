@@ -626,8 +626,9 @@ async def get_reports(
     """
     Returns list of screening reports based on RBAC.
     """
-    # Normalize role to uppercase for robust check
+    # Debug Logging for Visibility Issues
     role = current_user.role.upper() if current_user.role else ""
+    print(f"DEBUG: get_reports called by {current_user.sub}, Role: {role}")
     
     if role in ["CLINICIAN", "ADMIN", "DOCTOR"]:
         # Clinicians see ALL reports (Global/Org view)

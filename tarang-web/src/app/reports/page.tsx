@@ -17,7 +17,10 @@ export default function ReportsPage() {
         if (!token) return
         fetch(`${API_URL}/reports`, { headers: { 'Authorization': `Bearer ${token}` } })
             .then(res => res.ok ? res.json() : [])
-            .then(data => setReports(Array.isArray(data) ? data : []))
+            .then(data => {
+                console.log("DEBUG: Reports API Response:", data)
+                setReports(Array.isArray(data) ? data : [])
+            })
             .catch(err => console.warn('Reports fetch failed:', err))
             .finally(() => setLoading(false))
     }, [token])
