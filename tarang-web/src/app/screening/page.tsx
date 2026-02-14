@@ -16,12 +16,29 @@ function ScreeningPage() {
     const [answers, setAnswers] = useState<Record<string, string>>({})
     const [visionMetrics, setVisionMetrics] = useState<DetectedMetrics | null>(null)
     const [questionnaireResponses, setQuestionnaireResponses] = useState<number[]>(Array(10).fill(-1))
+    const [patientId, setPatientId] = useState<number | null>(null)
     const { token, user } = useAuth()
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const streamRef = useRef<MediaStream | null>(null)
     const detectionIntervalRef = useRef<number | null>(null)
     const { isLoaded, detect } = useMediaPipe()
+
+    // Fetch primary patient ID on mount
+    useEffect(() => {
+        if (token && !patientId) {
+            fetch(`${API_URL}/users/dashboard`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(res => res.ok ? res.json() : null)
+                .then(data => {
+                    if (data?.primary_patient_id) {
+                        setPatientId(data.primary_patient_id)
+                    }
+                })
+                .catch(err => console.warn("Failed to fetch patient ID:", err))
+        }
+    }, [token, patientId])
 
     // Start/stop camera based on step
     useEffect(() => {
@@ -146,7 +163,8 @@ function ScreeningPage() {
                     body: JSON.stringify({
                         video_metrics: metricsToSend,
                         questionnaire_score: calculateAQ10Score(questionnaireResponses),
-                        patient_name: user?.full_name || "Patient"
+                        patient_name: user?.full_name || "Patient",
+                        patient_id: patientId || 0 // Fallback to 0 if not found (backend might reject or handle)
                     })
                 })
 

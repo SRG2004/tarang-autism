@@ -255,7 +255,20 @@ def save_model(model, feature_cols, accuracy, save_path):
     }
     
     joblib.dump(model_data, save_path)
+    
+    # Save lightweight metrics JSON for dashboard
+    metrics_path = save_path.replace('.joblib', '_metrics.json')
+    import json
+    with open(metrics_path, 'w') as f:
+        json.dump({
+            'accuracy': accuracy,
+            'features': feature_cols,
+            'timestamp': model_data['training_date'],
+            'version': model_data['version']
+        }, f, indent=2)
+
     print(f"\n✓ Model saved to: {save_path}")
+    print(f"✓ Metrics saved to: {metrics_path}")
     print(f"  - Accuracy: {accuracy:.3f}")
     print(f"  - Features: {len(feature_cols)}")
 

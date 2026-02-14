@@ -15,7 +15,8 @@ export default function IntelligenceDashboard() {
         if (!token) return
         const headers = { 'Authorization': `Bearer ${token}` }
 
-        fetch(`${API_URL}/analytics/prediction/${encodeURIComponent(user?.email || 'Patient')}`, { headers })
+        // Backend now auto-resolves patient context for Parents, or accepts ?patient_id=
+        fetch(`${API_URL}/analytics/prediction`, { headers })
             .then(res => res.ok ? res.json() : null)
             .then(data => { if (data) setPrediction(data) })
             .catch(err => console.warn('Prediction fetch failed:', err))

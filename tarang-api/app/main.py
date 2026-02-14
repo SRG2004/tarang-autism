@@ -15,14 +15,16 @@ from app.fhir import FHIRMapper
 from app.schemas import (
     ScreeningBase, CommunityPostCreate, AppointmentSchedule,
     UserCreate, UserOut, Token, TokenData, OrganizationCreate, PatientCreate,
-    TherapyProgressCreate, TherapyProgressOut
+    TherapyProgressCreate, TherapyProgressOut,
+    UserSearchOut, PatientLinkRequest, AppointmentCreate, AppointmentOut,
+    CenterAnalyticsOut
 )
 from app.security import (
     get_current_user, get_password_hash, verify_password, create_access_token
 )
 from app.database import (
     SessionLocal, ScreeningSession, ClinicCenter, CommunityPost,
-    User, Organization, Patient, init_db
+    User, Organization, Patient, init_db, Appointment
 )
 from fastapi.security import OAuth2PasswordRequestForm
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -350,6 +352,23 @@ async def get_dashboard_data(
             if key in breakdown:
                 therapy_activities.append(meta)
     
+    # Phase 2: Care Team
+    care_team = []
+    primary_patient_id = None
+    user = db.query(User).filter(User.email == current_user.sub).first()
+    if user and user.role == "parent":
+        for child in user.children:
+            if child.clinician:
+                doc = child.clinician
+                if not any(d['id'] == doc.id for d in care_team):
+                    care_team.append({
+                        "id": doc.id,
+                        "name": doc.full_name,
+                        "role": "Primary Clinician"
+                    })
+        if user.children:
+            primary_patient_id = user.children[0].id
+    
     return {
         "total_screenings": total_screenings,
         "latest_risk": latest_risk,
@@ -357,7 +376,9 @@ async def get_dashboard_data(
         "stability_index": latest_risk if latest_risk else 0,
         "latest_recommendation": latest_recommendation,
         "recent_reports": recent_reports,
-        "therapy_activities": therapy_activities
+        "therapy_activities": therapy_activities,
+        "care_team": care_team,
+        "primary_patient_id": primary_patient_id
     }
 
 @app.get("/reports")
@@ -437,6 +458,7 @@ async def process_screening_industrial(
     video_metrics = payload.video_metrics
     questionnaire_score = payload.questionnaire_score
     patient_name = payload.patient_name
+    patient_id = payload.patient_id
     """
     Optimized endpoint with enhanced multimodal fusion and clinical explainability.
     """
@@ -450,7 +472,8 @@ async def process_screening_industrial(
         try:
             logger.info("Persistence attempt", extra={"patient": re.sub(r"[^\w]", "_", patient_name)})
             db_session = ScreeningSession(
-                patient_name=current_user.sub,
+                patient_name=patient_name, # Display name only
+                patient_id=patient_id,     # Linkage Key
                 risk_score=risk_results["risk_score"],
                 confidence=risk_results["confidence"],
                 dissonance_factor=risk_results.get("dissonance_factor"),
@@ -704,30 +727,216 @@ async def screening_signaling(websocket: WebSocket, room_id: str):
         signaling_manager.disconnect(websocket, room_id)
 
 
-@app.post("/appointments/schedule")
-async def schedule_appointment(
-    payload: AppointmentSchedule,
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+@app.get("/analytics/center", response_model=CenterAnalyticsOut)
+async def get_center_analytics(
+    current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    patient_id = payload.patient_id
-    specialist_id = payload.specialist_id
-    timeslot = payload.timeslot
-    # Industrial scheduling logic (mocked)
-    logger.info("Scheduling attempt", extra={
-        "patient": re.sub(r"[^\w]", "_", patient_id),
-        "specialist": re.sub(r"[^\w]", "_", specialist_id),
-        "time": re.sub(r"[\r\n]", " ", timeslot)
-    })
-    return {"status": "Confirmed", "reservation_id": "RSV_7721", "timeslot": timeslot}
+    """
+    Multitenant Analytics: Returns aggregate stats for the clinician's organization.
+    """
+    if current_user.role not in ["doctor", "admin"]:
+        raise HTTPException(status_code=403, detail="Access denied")
 
-@app.get("/analytics/prediction/{patient_name}")
-async def get_patient_prediction(
-    patient_name: str,
+    if settings.DEMO_MODE:
+        # Synthetic Aggregate Data
+        return CenterAnalyticsOut(
+            org_id=current_user.org_id or 1,
+            total_patients=142,
+            total_screenings=856,
+            high_risk_count=12,
+            risk_distribution={"Low": 110, "Medium": 20, "High": 12},
+            weekly_activity=[15, 22, 18, 25, 30, 12, 5]
+        )
+
+    # Real Data Aggregation
+    if not current_user.org_id:
+        raise HTTPException(status_code=400, detail="User not part of an organization")
+
+    # 1. Total Patients in Org
+    total_patients = db.query(Patient).filter(Patient.org_id == current_user.org_id).count()
+
+    # 2. Get all screenings for patients in this org
+    # Join ScreeningSession -> Patient -> org_id check
+    sessions_query = db.query(ScreeningSession).join(Patient).filter(Patient.org_id == current_user.org_id)
+    total_screenings = sessions_query.count()
+
+    # 3. High Risk Count (risk_score > 0.7 or similar logic, assuming 'risk_score' is float 0-1)
+    # Adjust threshold based on your ML model calibration
+    high_risk_count = sessions_query.filter(ScreeningSession.risk_score >= 0.8).count()
+
+    # 4. Risk Distribution
+    low_risk = sessions_query.filter(ScreeningSession.risk_score < 0.4).count()
+    med_risk = sessions_query.filter(ScreeningSession.risk_score >= 0.4, ScreeningSession.risk_score < 0.8).count()
+    
+    # 5. Weekly Activity (Last 7 days)
+    today = datetime.datetime.utcnow().date()
+    weekly_activity = []
+    for i in range(7):
+        day = today - datetime.timedelta(days=6-i) # Start 6 days ago
+        count = sessions_query.filter(
+            ScreeningSession.created_at >= day,
+            ScreeningSession.created_at < day + datetime.timedelta(days=1)
+        ).count()
+        weekly_activity.append(count)
+
+    return CenterAnalyticsOut(
+        org_id=current_user.org_id,
+        total_patients=total_patients,
+        total_screenings=total_screenings,
+        high_risk_count=high_risk_count,
+        risk_distribution={
+            "Low": low_risk,
+            "Medium": med_risk,
+            "High": high_risk_count
+        },
+        weekly_activity=weekly_activity
+    )
+
+@app.get("/users/search", response_model=List[UserSearchOut])
+async def search_users(
+    email: str,
     db: Session = Depends(get_db),
     current_user: TokenData = Depends(get_current_user)
 ):
-    sessions = db.query(ScreeningSession).filter(ScreeningSession.patient_name == patient_name).all()
+    users = db.query(User).filter(User.email.ilike(f"%{email}%"), User.role == "parent").limit(5).all()
+    return users
+
+@app.post("/clinical/patients/link")
+async def link_patient(
+    payload: PatientLinkRequest,
+    db: Session = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user)
+):
+    # Verify clinician role
+    if current_user.role != "CLINICIAN":
+        raise HTTPException(status_code=403, detail="Only clinicians can link patients")
+    
+    # Associate Parent
+    parent = db.query(User).filter(User.email == payload.parent_email).first()
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent user not found")
+        
+    patient = db.query(Patient).filter(Patient.id == payload.patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+        
+    patient.parent_user_id = parent.id
+    
+    # Assign Clinician (Self)
+    clinician = db.query(User).filter(User.email == current_user.sub).first()
+    if clinician:
+        patient.clinician_id = clinician.id
+        
+    db.commit()
+    return {"status": "Linked", "patient": patient.name, "parent": parent.full_name}
+
+@app.post("/appointments", response_model=AppointmentOut)
+async def create_appointment(
+    payload: AppointmentCreate,
+    db: Session = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user)
+):
+    user = db.query(User).filter(User.email == current_user.sub).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    status = "requested"
+    clinician_id = None
+
+    if user.role == "CLINICIAN":
+        clinician_id = user.id
+        status = "confirmed"
+        # Verify patient exists
+        patient = db.query(Patient).filter(Patient.id == payload.patient_id).first()
+        if not patient:
+             raise HTTPException(status_code=404, detail="Patient not found")
+    elif user.role == "PARENT":
+        # Verify patient belongs to parent
+        patient = db.query(Patient).filter(Patient.id == payload.patient_id, Patient.parent_user_id == user.id).first()
+        if not patient:
+            raise HTTPException(status_code=404, detail="Patient not found or not authorized")
+        
+        if not patient.clinician_id:
+             raise HTTPException(status_code=400, detail="Patient has no assigned clinician to request appointment with")
+        clinician_id = patient.clinician_id
+        status = "requested"
+    else:
+        raise HTTPException(status_code=403, detail="Role not authorized to create appointments")
+
+    new_app = Appointment(
+        patient_id=payload.patient_id,
+        clinician_id=clinician_id,
+        start_time=payload.start_time,
+        end_time=payload.end_time,
+        notes=payload.notes,
+        status=status
+    )
+    db.add(new_app)
+    db.commit()
+    db.refresh(new_app)
+    
+    # Populate names for response
+    new_app.clinician_name = new_app.clinician.full_name if new_app.clinician else "Unknown"
+    new_app.patient_name = patient.name if patient else "Unknown"
+    
+    return new_app
+
+@app.get("/appointments", response_model=List[AppointmentOut])
+async def get_appointments(
+    db: Session = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user)
+):
+    user = db.query(User).filter(User.email == current_user.sub).first()
+    if not user:
+        return []
+        
+    if user.role == "CLINICIAN":
+        apps = db.query(Appointment).filter(Appointment.clinician_id == user.id).all()
+    elif user.role == "PARENT":
+        # Find children
+        children_ids = [c.id for c in user.children] # via backref
+        # OR query directly if backref is tricky in sync
+        # children = db.query(Patient).filter(Patient.parent_user_id == user.id).all()
+        # For robustness let's query:
+        apps = db.query(Appointment).join(Patient).filter(Patient.parent_user_id == user.id).all()
+    else:
+        apps = []
+        
+    # Hydrate names manually or via joinedload (keeping simple here)
+    for app in apps:
+        app.clinician_name = app.clinician.full_name if app.clinician else "Unknown"
+        app.patient_name = app.patient.name if app.patient else "Unknown"
+        
+    return apps
+
+@app.get("/analytics/prediction")
+async def get_patient_prediction(
+    patient_id: Optional[int] = None,
+    patient_name: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user)
+):
+    query = db.query(ScreeningSession)
+    
+    if patient_id:
+        query = query.filter(ScreeningSession.patient_id == patient_id)
+    elif patient_name:
+        # Fallback to name-based lookup (less reliable)
+        query = query.filter(ScreeningSession.patient_name == patient_name)
+    else:
+        # User defaults
+        if current_user.role == "PARENT":
+             # Try to find a child linked to this parent
+             child = db.query(Patient).filter(Patient.parent_user_id == db.query(User).filter(User.email == current_user.sub).first().id).first()
+             if child:
+                 query = query.filter(ScreeningSession.patient_id == child.id)
+             else:
+                 return {"error": "No patient context found"}
+        else:
+             return {"error": "Patient ID or Name required"}
+
+    sessions = query.order_by(ScreeningSession.created_at.asc()).all()
     scores = [s.risk_score for s in sessions]
     
     if not scores:

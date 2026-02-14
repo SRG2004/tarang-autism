@@ -35,7 +35,7 @@ export const ROLE_ROUTES: Record<UserRole, { home: string; allowed: string[] }> 
     },
     CLINICIAN: {
         home: '/clinical',
-        allowed: ['/dashboard', '/clinical', '/reports', '/intelligence', '/screening', '/community', '/profile', '/settings', '/privacy', '/contact']
+        allowed: ['/dashboard', '/clinical', '/reports', '/intelligence', '/community', '/profile', '/settings', '/privacy', '/contact']
     },
     ADMIN: {
         home: '/dashboard',

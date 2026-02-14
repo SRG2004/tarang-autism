@@ -136,7 +136,10 @@ export default function ReportsPage() {
                             <p className="opacity-60 font-medium">Create a unified longitudinal view for clinical stakeholders.</p>
                         </div>
                     </div>
-                    <button className="bg-[#D4AF37] text-[#0B3D33] px-10 py-5 font-black uppercase tracking-widest hover:bg-[#FDFCF8] transition-all">
+                    <button
+                        onClick={() => router.push('/intelligence')}
+                        className="bg-[#D4AF37] text-[#0B3D33] px-10 py-5 font-black uppercase tracking-widest hover:bg-[#FDFCF8] transition-all"
+                    >
                         Initialize Synthesis
                     </button>
                 </div>

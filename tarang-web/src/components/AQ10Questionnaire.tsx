@@ -138,10 +138,10 @@ export default function AQ10Questionnaire({ responses, onResponseChange, onCompl
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             {[
-                                { label: "Definitely Agree", value: question.reverse ? 0 : 1 },
-                                { label: "Slightly Agree", value: question.reverse ? 0 : 1 },
-                                { label: "Slightly Disagree", value: question.reverse ? 1 : 0 },
-                                { label: "Definitely Disagree", value: question.reverse ? 1 : 0 }
+                                { label: "Definitely Agree" },
+                                { label: "Slightly Agree" },
+                                { label: "Slightly Disagree" },
+                                { label: "Definitely Disagree" }
                             ].map((option, optIndex) => (
                                 <button
                                     key={optIndex}

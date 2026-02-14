@@ -67,9 +67,30 @@ class Patient(Base):
     address = Column(EncryptedType(String, SECRET_KEY, AesEngine, 'pkcs5'), nullable=True)
     org_id = Column(Integer, ForeignKey("organizations.id"))
     
+    # Phase 2: Links to Parent and Clinician
+    parent_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    clinician_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
     organization = relationship("Organization", back_populates="patients")
+    parent_user = relationship("User", foreign_keys=[parent_user_id], backref="children")
+    clinician = relationship("User", foreign_keys=[clinician_id], backref="assigned_patients")
+    
     sessions = relationship("ScreeningSession", back_populates="patient")
     progress = relationship("TherapyProgress", back_populates="patient")
+
+class Appointment(Base):
+    __tablename__ = "appointments"
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("patients.id"))
+    clinician_id = Column(Integer, ForeignKey("users.id"))
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
+    status = Column(String, default="requested") # requested, confirmed, completed, cancelled
+    notes = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    patient = relationship("Patient", backref="appointments")
+    clinician = relationship("User", foreign_keys=[clinician_id], backref="appointments")
 
 class ClinicCenter(Base):
     __tablename__ = "clinic_centers"
@@ -139,6 +160,8 @@ def _migrate_missing_columns():
         ("screening_sessions", "patient_id", "INTEGER"),
         ("screening_sessions", "dissonance_factor", "FLOAT"),
         ("screening_sessions", "interpretation", "VARCHAR"),
+        ("patients", "parent_user_id", "INTEGER"),
+        ("patients", "clinician_id", "INTEGER"),
     ]
     
     db = SessionLocal()

@@ -43,12 +43,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
+        sub: str = payload.get("sub")
         role: str = payload.get("role")
         org_id: int = payload.get("org_id")
-        if username is None:
+        if sub is None:
             raise credentials_exception
-        token_data = TokenData(username=username, sub=username, role=role, org_id=org_id)
+        token_data = TokenData(sub=sub, role=role, org_id=org_id)
     except JWTError:
         raise credentials_exception
     return token_data
@@ -60,11 +60,11 @@ def decode_websocket_token(token: str) -> Optional[TokenData]:
     """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
+        sub: str = payload.get("sub")
         role: str = payload.get("role")
         org_id: int = payload.get("org_id")
-        if username is None:
+        if sub is None:
             return None
-        return TokenData(username=username, sub=username, role=role, org_id=org_id)
+        return TokenData(sub=sub, role=role, org_id=org_id)
     except JWTError:
         return None
