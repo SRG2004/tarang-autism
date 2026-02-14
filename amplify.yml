@@ -9,9 +9,13 @@ frontend:
       commands:
         - npm run build
   artifacts:
-    baseDirectory: tarang-web/out
+    baseDirectory: tarang-web
     files:
-      - '**/*'
+      - '.next/**/*'
+      - 'public/**/*'
+      - 'node_modules/**/*'
+      - 'package.json'
+      - 'next.config.ts'
   cache:
     paths:
       - tarang-web/node_modules/**/*

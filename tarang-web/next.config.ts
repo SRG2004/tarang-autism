@@ -2,8 +2,7 @@ import type { NextConfig } from "next";
 
 // @ts-ignore
 const nextConfig: NextConfig = {
-  // Enable static export for Amplify
-  output: 'export',
+  // Use default Next.js output for Amplify SSR support
   trailingSlash: true,
   images: {
     unoptimized: true
