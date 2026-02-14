@@ -31,6 +31,21 @@ export default function LiveScreeningPage() {
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     }
 
+    // Helper function to safely send WebSocket messages
+    const sendWebSocketMessage = (message: any) => {
+        if (socket.current?.readyState === WebSocket.OPEN) {
+            try {
+                socket.current.send(JSON.stringify(message))
+                return true
+            } catch (error) {
+                console.error('Failed to send WebSocket message:', error)
+                return false
+            }
+        }
+        console.warn('WebSocket not ready, message not sent:', message)
+        return false
+    }
+
     useEffect(() => {
         if (!roomId || !token) return
 
@@ -48,18 +63,37 @@ export default function LiveScreeningPage() {
                 const wsUrl = `${wsProtocol}://${wsHost}/ws/screening/${roomId}?token=${token}`
                 socket.current = new WebSocket(wsUrl)
 
-                socket.current.onmessage = async (event) => {
-                    const message = JSON.parse(event.data)
+                socket.current.onopen = () => {
+                    console.log('WebSocket connected')
+                    setStatus('connected')
+                }
 
-                    if (message.offer) {
-                        await peerConnection.current?.setRemoteDescription(new RTCSessionDescription(message.offer))
-                        const answer = await peerConnection.current?.createAnswer()
-                        await peerConnection.current?.setLocalDescription(answer)
-                        socket.current?.send(JSON.stringify({ answer }))
-                    } else if (message.answer) {
-                        await peerConnection.current?.setRemoteDescription(new RTCSessionDescription(message.answer))
-                    } else if (message.iceCandidate) {
-                        await peerConnection.current?.addIceCandidate(new RTCIceCandidate(message.iceCandidate))
+                socket.current.onclose = () => {
+                    console.log('WebSocket disconnected')
+                    setStatus('ended')
+                }
+
+                socket.current.onerror = (error) => {
+                    console.error('WebSocket error:', error)
+                    setStatus('ended')
+                }
+
+                socket.current.onmessage = async (event) => {
+                    try {
+                        const message = JSON.parse(event.data)
+
+                        if (message.offer) {
+                            await peerConnection.current?.setRemoteDescription(new RTCSessionDescription(message.offer))
+                            const answer = await peerConnection.current?.createAnswer()
+                            await peerConnection.current?.setLocalDescription(answer)
+                            sendWebSocketMessage({ answer })
+                        } else if (message.answer) {
+                            await peerConnection.current?.setRemoteDescription(new RTCSessionDescription(message.answer))
+                        } else if (message.iceCandidate) {
+                            await peerConnection.current?.addIceCandidate(new RTCIceCandidate(message.iceCandidate))
+                        }
+                    } catch (error) {
+                        console.error('Error processing WebSocket message:', error)
                     }
                 }
 
@@ -78,7 +112,7 @@ export default function LiveScreeningPage() {
 
                 peerConnection.current.onicecandidate = (event) => {
                     if (event.candidate) {
-                        socket.current?.send(JSON.stringify({ iceCandidate: event.candidate }))
+                        sendWebSocketMessage({ iceCandidate: event.candidate })
                     }
                 }
 
@@ -86,8 +120,15 @@ export default function LiveScreeningPage() {
                 if (user?.role === 'CLINICIAN' || user?.role === 'ADMIN') {
                     const offer = await peerConnection.current.createOffer()
                     await peerConnection.current.setLocalDescription(offer)
-                    socket.current.onopen = () => {
-                        socket.current?.send(JSON.stringify({ offer }))
+                    
+                    // Wait for WebSocket to be ready before sending offer
+                    if (socket.current.readyState === WebSocket.OPEN) {
+                        sendWebSocketMessage({ offer })
+                    } else {
+                        socket.current.onopen = () => {
+                            console.log('WebSocket connected, sending offer')
+                            sendWebSocketMessage({ offer })
+                        }
                     }
                 }
 
@@ -99,9 +140,29 @@ export default function LiveScreeningPage() {
         initWebRTC()
 
         return () => {
-            localStream?.getTracks().forEach(track => track.stop())
-            peerConnection.current?.close()
-            socket.current?.close()
+            // Cleanup detection interval
+            if (detectionIntervalRef.current) {
+                clearInterval(detectionIntervalRef.current)
+                detectionIntervalRef.current = null
+            }
+            
+            // Cleanup media streams
+            localStream?.getTracks().forEach(track => {
+                track.stop()
+                console.log('Stopped local track:', track.kind)
+            })
+            
+            // Cleanup peer connection
+            if (peerConnection.current) {
+                peerConnection.current.close()
+                peerConnection.current = null
+            }
+            
+            // Cleanup WebSocket
+            if (socket.current) {
+                socket.current.close()
+                socket.current = null
+            }
         }
     }, [roomId, token, user?.role])
 

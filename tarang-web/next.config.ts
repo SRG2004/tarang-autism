@@ -2,7 +2,11 @@ import type { NextConfig } from "next";
 
 // @ts-ignore
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  // Remove 'standalone' output for Amplify compatibility
+  trailingSlash: true,
+  images: {
+    unoptimized: true
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -24,7 +28,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
               "img-src 'self' data: https: https://images.unsplash.com https://vercel.live; " +
               "font-src 'self' data: https: https://fonts.gstatic.com https://vercel.live; " +
-              "connect-src 'self' http://localhost:8000 https://*.onrender.com wss://localhost:8000 wss://*.onrender.com https://cdn.jsdelivr.net https://storage.googleapis.com https://vercel.live wss://ws-us3.pusher.com https://sockjs-us3.pusher.com; " +
+              "connect-src 'self' http://localhost:8000 https://*.onrender.com wss://localhost:8000 wss://*.onrender.com https://cdn.jsdelivr.net https://storage.googleapis.com https://vercel.live wss://ws-us3.pusher.com https://sockjs-us3.pusher.com https://*.awsapprunner.com wss://*.awsapprunner.com; " +
               "worker-src 'self' blob:; " +
               "child-src 'self' blob:; " +
               "frame-src 'self' https://vercel.live;"
