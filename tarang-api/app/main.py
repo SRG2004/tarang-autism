@@ -1023,7 +1023,15 @@ async def get_patient_prediction(
              else:
                  return {"error": "No patient context found"}
         else:
-             return {"error": "Patient ID or Name required"}
+             # For Clinicians/Admins: Default to the MOST RECENT patient's data (Global Dashboard View)
+             latest_session = db.query(ScreeningSession).order_by(ScreeningSession.created_at.desc()).first()
+             if latest_session and latest_session.patient_id:
+                 query = query.filter(ScreeningSession.patient_id == latest_session.patient_id)
+                 # Optional: Add a note to response? (Hard to do without changing return shape significantly)
+             elif settings.DEMO_MODE:
+                 pass # Allow fall-through to generate dummy data
+             else:
+                 return {"error": "Patient ID or Name required"}
 
     sessions = query.order_by(ScreeningSession.created_at.asc()).all()
     scores = [s.risk_score for s in sessions]
