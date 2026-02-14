@@ -74,17 +74,23 @@ def on_startup():
     init_db()
 
 # CORS must be added FIRST so it wraps all responses (including error responses)
+_required_origins = ["https://tarang-autism.vercel.app", "http://localhost:3000"]
 if isinstance(settings.ALLOWED_ORIGINS, str):
     _origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
 elif isinstance(settings.ALLOWED_ORIGINS, list):
     _origins = [o.strip() for o in settings.ALLOWED_ORIGINS if o.strip()]
 else:
-    _origins = ["*"]
+    _origins = []
+
+# Merge required origins (always include Vercel + localhost)
+for origin in _required_origins:
+    if origin not in _origins:
+        _origins.append(origin)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
-    allow_credentials=True if _origins != ["*"] else False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
@@ -649,40 +655,6 @@ async def screening_signaling(websocket: WebSocket, room_id: str):
         logger.error(f"Signaling error in room {room_id}: {str(e)}")
         signaling_manager.disconnect(websocket, room_id)
 
-@app.get("/reports/{session_id}/download")
-async def download_report(
-    session_id: int, 
-    db: Session = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user)
-):
-    session = db.query(ScreeningSession).filter(ScreeningSession.id == session_id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    # Security: Ensure user belongs to the same Org as the patient
-    patient = db.query(Patient).filter(Patient.id == session.patient_id).first()
-    if patient and patient.org_id != current_user.org_id:
-        logger.warning("Unauthorized access attempt to report", extra={
-            "user": current_user.sub,
-            "session": session_id
-        })
-        raise HTTPException(status_code=403, detail="Unauthorized")
-    
-    session_data = {
-        "patient_name": session.patient_name,
-        "risk_score": session.risk_score,
-        "confidence": session.confidence,
-        "breakdown": session.breakdown,
-        "clinical_recommendation": session.clinical_recommendation,
-        "timestamp": session.created_at.strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    pdf_buffer = ReportGenerator.generate_clinical_pdf(session_data)
-    return StreamingResponse(
-        pdf_buffer, 
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=tarang_report_{session_id}.pdf"}
-    )
 
 @app.post("/appointments/schedule")
 async def schedule_appointment(

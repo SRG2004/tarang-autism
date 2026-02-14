@@ -128,10 +128,12 @@ function ScreeningPage() {
         { name: "Fusion_Output", icon: CheckCircle2, summary: "Clinical Decision Support" }
     ]
 
+    const [screeningError, setScreeningError] = useState<string | null>(null)
+
     const handleNext = async () => {
         if (step === 3) {
             setLoading(true)
-            // Actual API simulation
+            setScreeningError(null)
             try {
                 const metricsToSend = visionMetrics || { eye_contact: 0.65, motor_coordination: 0.8 }
 
@@ -149,21 +151,16 @@ function ScreeningPage() {
                 })
 
                 if (!response.ok) {
-                    throw new Error(`API Error: ${response.status}`)
+                    const errBody = await response.text().catch(() => '')
+                    throw new Error(`Server error ${response.status}: ${errBody}`)
                 }
 
                 const data = await response.json()
                 setResults(data)
                 setStep(4)
-            } catch (e) {
-                console.error("API call failed:", e)
-                // Fallback if backend isn't up
-                setResults({
-                    risk_results: { risk_score: 72.4, confidence: "High", breakdown: { behavioral: 78, questionnaire: 65, physiological: 80 } },
-                    clinical_summary: { clinical_recommendation: "Referral to Pediatric Neurologist recommended." },
-                    therapy_plan: { focus_area: "Joint Attention & Gaze Stability" }
-                })
-                setStep(4)
+            } catch (e: any) {
+                console.error("Screening API failed:", e)
+                setScreeningError(e?.message || "Failed to process screening. Please check your connection and try again.")
             } finally {
                 setLoading(false)
             }
@@ -355,6 +352,19 @@ function ScreeningPage() {
                                         {loading ? <Loader2 className="w-8 h-8 animate-spin" /> : "Initiate Final Fusion"}
                                         {!loading && <Zap className="w-8 h-8" />}
                                     </button>
+
+                                    {screeningError && (
+                                        <div className="mt-8 p-6 border-2 border-red-400 bg-red-50 text-center max-w-xl mx-auto">
+                                            <p className="text-red-600 font-bold uppercase tracking-widest text-xs mb-3">Screening Failed</p>
+                                            <p className="text-sm text-red-500 mb-4">{screeningError}</p>
+                                            <button
+                                                onClick={handleNext}
+                                                className="text-[10px] font-black uppercase tracking-widest text-red-600 border-b-2 border-red-400 pb-1 hover:opacity-60 transition-all"
+                                            >
+                                                Try Again
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
