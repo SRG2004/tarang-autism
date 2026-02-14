@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 
 export function useMediaPipe() {
@@ -25,12 +25,12 @@ export function useMediaPipe() {
         init()
     }, [])
 
-    const detect = (videoElement: HTMLVideoElement) => {
+    const detect = useCallback((videoElement: HTMLVideoElement) => {
         if (!faceLandmarkerRef.current || !videoElement.videoWidth) return null
         const startTimeMs = performance.now()
         const results = faceLandmarkerRef.current.detectForVideo(videoElement, startTimeMs)
         return results
-    }
+    }, [])
 
     return { isLoaded, detect }
 }

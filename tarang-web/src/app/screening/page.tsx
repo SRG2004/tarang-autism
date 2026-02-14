@@ -331,7 +331,7 @@ function ScreeningPage() {
                                     </div>
 
                                     <div className="relative aspect-video bg-black overflow-hidden mb-12 shadow-2xl">
-                                        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1] opacity-60" />
+                                        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1] opacity-90" />
 
                                         {/* Overlay Markers */}
                                         <div className="absolute inset-0 border-[30px] border-[#0B3D33]/50 pointer-events-none" />
